@@ -592,6 +592,14 @@ export const parseSRSSpringsTopology = (content) => {
   };
 };
 
+// PSP2 format is structurally identical to SRS Springs (PSP1).
+// Spring vectors are in the particle's local frame (used for orientation torques),
+// but for visualization purposes the topology is parsed the same way.
+export const parsePSP2Topology = (content) => {
+  const result = parseSRSSpringsTopology(content);
+  return { ...result, format: 'psp2' };
+};
+
 // Function to parse standard oxDNA nucleotide topology
 // Header: N nStrands
 // Body: strandId base n3 n5  (one line per nucleotide)
@@ -660,6 +668,10 @@ export const parseTopFile = async (content, fileMap, detectedFormat = null, opti
 
   if (detectedFormat === 'srs_springs') {
     return parseSRSSpringsTopology(content);
+  }
+
+  if (detectedFormat === 'psp2') {
+    return parsePSP2Topology(content);
   }
 
   if (detectedFormat === 'oxdna_nucleotide') {

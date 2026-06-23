@@ -49,13 +49,14 @@ Components read from stores directly — **no prop drilling**.
 | Flavio topology | `*particles*.txt` + `*.patch.txt` | companion files (name-flexible) |
 | Raspberry topology | `.top` | `iP`/`iR`/`iC` keywords in file |
 | SRS Springs topology | `.psp` | 4-integer header + `iS` keyword in file |
+| PSP2 topology | `.psp` | same as SRS Springs + `PSP2` in comment OR `interaction_type = PSP2` in input file |
 | MGL (self-contained) | `.mgl` | `@` separator + optional `.Box:` header |
 | Trajectory | `.dat`, `.traj`, `.conf` | content keywords |
 | MGL Trajectory | `.mgl` with `.Box:` | multi-frame `.Box:` headers |
 
 File type priority: `traj > last > init > conf`
 
-Detection order in `analyzeTopologyFile`: SRS Springs → (2-token header check) → Raspberry → **oxDNA nucleotide** → Flavio → Lorenzo. Format extraction uses `type.split('-').slice(1).join('_')` so `topology-oxdna_nucleotide` → format `oxdna_nucleotide`.
+Detection order in `analyzeTopologyFile`: SRS Springs/PSP2 → (2-token header check) → Raspberry → **oxDNA nucleotide** → Flavio → Lorenzo. Format extraction uses `type.split('-').slice(1).join('_')` so `topology-oxdna_nucleotide` → format `oxdna_nucleotide`.
 
 ### oxDNA Nucleotide Format (standard `.top`)
 ```
@@ -120,6 +121,21 @@ iS <id> <k> <r0> <x> <y> <z>
 - `App.js` sets `particleRadius` from `srsParticleRadius` after parsing
 - Springs rendered by `Springs.js` as gray cylinders; springs longer than `min(box)/2` are hidden
 - Patches assigned per-particle from body line; `particlesByType` uses first particle's type as representative per strand
+
+### PSP2 Format (`.psp`, `interaction_type = PSP2`)
+PSP2 is structurally identical to SRS Springs but spring vectors are in the **local particle frame** (used for orientation torques). The file format is the same:
+```
+<N> <strands> <maxPatches> <maxSprings>
+iP <id> <color> <strength> <x> <y> <z>   # patch position in local frame
+iS <id> <k> <r0> <x> <y> <z>             # spring attachment in local frame
+<type> <strand> <radius> <mass> <numPatches> [patchIds...] [neighborIdx springIdx]...
+```
+Detection (either is sufficient):
+- Comment line contains `PSP2` (e.g. `# Patched scaled PSP2 ...`) → detected as `topology-psp2` directly
+- `interaction_type = PSP2` in the oxDNA input file → upgrades `srs_springs` → `psp2` in App.js after input file is parsed
+- Neither present → detected as `topology-srs_springs` (renders identically)
+- Parsed by `parsePSP2Topology` (wraps `parseSRSSpringsTopology`, tags `format: 'psp2'`)
+- Springs rendered center-to-center (same as SRS Springs); `srsParticleRadius` used for particle size
 
 ### Flavio Companion File Lookup (`parseFlavioTopology`)
 `parseFlavioTopology(content, fileMap, options)` resolves the particles and patches files with a multi-step fallback:

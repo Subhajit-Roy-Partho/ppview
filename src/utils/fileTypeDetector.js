@@ -108,15 +108,17 @@ function isTrajectoryFile(lines) {
 function analyzeTopologyFile(lines) {
   if (lines.length < 2) return null;
 
-  // Check for SRS Springs format (Bullview .psp):
+  // Check for SRS Springs (PSP1) and PSP2 formats:
   // - First non-comment line has exactly 4 integer tokens
   // - File contains at least one 'iS ' line (spring definition)
+  // - If a comment line contains 'PSP2' → topology-psp2, else → topology-srs_springs
   const nonCommentLines = lines.filter(l => !l.startsWith('#'));
   if (nonCommentLines.length >= 1) {
     const firstTokens = nonCommentLines[0].split(/\s+/);
     if (firstTokens.length === 4 && firstTokens.every(t => !isNaN(parseInt(t)))) {
-      if (lines.some(l => /^iS\s/.test(l))) {
-        return 'topology-srs_springs';
+      if (lines.some(l => /^iS[\s]/.test(l))) {
+        const hasPSP2Comment = lines.some(l => l.startsWith('#') && /PSP2/i.test(l));
+        return hasPSP2Comment ? 'topology-psp2' : 'topology-srs_springs';
       }
     }
   }
@@ -383,6 +385,7 @@ export function categorizeFiles(filesWithTypes) {
       case 'topology-flavio':
       case 'topology-raspberry':
       case 'topology-srs_springs':
+      case 'topology-psp2':
       case 'topology-oxdna_nucleotide':
         categorized.topology = {file, format: type.split('-').slice(1).join('_')};
         break;

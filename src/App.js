@@ -167,6 +167,13 @@ function App() {
             console.log(`Found PATCHY_radius in input file: ${radius}`);
             setParticleRadius(radius);
           }
+
+          // Upgrade topology format to psp2 when interaction_type says so
+          if (inputFileParams.interaction_type === 'PSP2' &&
+              categorizedFiles.topology?.format === 'srs_springs') {
+            categorizedFiles.topology.format = 'psp2';
+            console.log('Upgraded topology format to psp2 based on input file interaction_type');
+          }
         } catch (error) {
           console.warn('Error parsing input file:', error);
           // Non-fatal error, continue processing other files
