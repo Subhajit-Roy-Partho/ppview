@@ -22,7 +22,7 @@ import { useClusteringStore } from "./store/clusteringStore";
 import "./styles.css";
 import {
   PlayIcon, PauseIcon, ResetIcon, SpeedIcon, TagIcon, CircleIcon,
-  BoxIcon, LayersIcon, RulerIcon, ChartIcon, CameraIcon, DownloadIcon,
+  LayersIcon, ChartIcon, CameraIcon, DownloadIcon,
   ChevronUpIcon, ChevronDownIcon, CloseIcon, AxisIcon, SparklesIcon, LightbulbIcon
 } from "./components/Icons";
 
@@ -133,7 +133,7 @@ function App() {
   }, [sceneRef, currentConfigIndex, isPathtracerEnabled, pathtracerConfig.resolutionScale]);
 
 
-  const handleFilesReceived = async (files) => {
+  const handleFilesReceived = useCallback(async (files) => {
     if (!files || files.length === 0) {
       // No files selected or operation cancelled
       return;
@@ -339,7 +339,8 @@ function App() {
       setFilesDropped(false);
       setIsLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load configuration when topData, trajFile, and configIndex are available
   useEffect(() => {

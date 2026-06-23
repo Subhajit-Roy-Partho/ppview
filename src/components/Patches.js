@@ -213,7 +213,7 @@ function Patches({ particles, patchPositions, patchIDs, boxSize, colorScheme = n
         // Note: This may not work perfectly with all path tracers
       }
     }
-  }, [particles, patchPositions, patchIDs, boxSize, hasValidPatchData, colorScheme, particleRadius]);
+  }, [particles, patchPositions, patchIDs, boxSize, hasValidPatchData, colorScheme, particleRadius, isPathtracerEnabled]);
 
   // Compute patch data for both rendering modes (must be before early return)
   const patchData = useMemo(() => {

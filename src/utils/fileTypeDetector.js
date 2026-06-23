@@ -207,7 +207,6 @@ function hasParticleFormat(lines) {
   // Look for particle_X entries and type/patches definitions
   let hasParticleEntry = false;
   let hasTypeEntry = false;
-  let hasPatchesEntry = false;
 
   for (const line of lines.slice(0, 20)) { // Check first 20 lines
     if (/^particle_\d+/.test(line)) {
@@ -215,9 +214,6 @@ function hasParticleFormat(lines) {
     }
     if (/^type\s*=/.test(line)) {
       hasTypeEntry = true;
-    }
-    if (/^patches\s*=/.test(line)) {
-      hasPatchesEntry = true;
     }
   }
 

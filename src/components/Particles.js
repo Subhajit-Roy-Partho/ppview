@@ -337,7 +337,7 @@ function Particles({
     } catch (error) {
       console.warn('Error during particle double-click:', error);
     }
-  }, [camera, particleData, onParticleDoubleClick, getNormalizedMouseCoords, selectedParticles, isPathtracerEnabled]);
+  }, [camera, particleData, onParticleDoubleClick, getNormalizedMouseCoords, isPathtracerEnabled]);
 
   // Raycaster for detecting clicks and double-clicks
   useEffect(() => {
