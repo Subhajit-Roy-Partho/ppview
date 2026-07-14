@@ -264,8 +264,8 @@ function App() {
         }
         console.log(`Loaded ${categorizedFiles.topology.format} topology from ${topFile.name}`);
       } else {
-        // Fallback: look for .top extension
-        const topFile = files.find((file) => file.name.endsWith(".top"));
+        // Fallback: look for .top or .phb extension
+        const topFile = files.find((file) => file.name.endsWith(".top") || file.name.endsWith(".phb"));
         if (topFile) {
           const topContent = await topFile.text();
           const parsedTopData = await parseTopFile(topContent, fileMap, null, {

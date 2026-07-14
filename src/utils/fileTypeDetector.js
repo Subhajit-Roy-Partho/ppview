@@ -120,6 +120,10 @@ function analyzeTopologyFile(lines) {
         const hasPSP2Comment = lines.some(l => l.startsWith('#') && /PSP2/i.test(l));
         return hasPSP2Comment ? 'topology-psp2' : 'topology-srs_springs';
       }
+      // PHB format: 4-token header with iP + iC lines but no iS lines
+      if (lines.some(l => /^iP[\s]/.test(l)) && lines.some(l => /^iC[\s]/.test(l))) {
+        return 'topology-phb';
+      }
     }
   }
 
@@ -383,6 +387,7 @@ export function categorizeFiles(filesWithTypes) {
       case 'topology-srs_springs':
       case 'topology-psp2':
       case 'topology-oxdna_nucleotide':
+      case 'topology-phb':
         categorized.topology = {file, format: type.split('-').slice(1).join('_')};
         break;
       case 'trajectory':

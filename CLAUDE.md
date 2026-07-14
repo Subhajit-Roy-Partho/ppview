@@ -48,6 +48,7 @@ Components read from stores directly — **no prop drilling**.
 | Lorenzo topology | `.top` | `<count> <type_count>` 2-token header |
 | Flavio topology | `*particles*.txt` + `*.patch.txt` | companion files (name-flexible) |
 | Raspberry topology | `.top` | `iP`/`iR`/`iC` keywords in file |
+| PHB topology | `.phb` | 4-token header + `iP`/`iC` keywords, no `iS` |
 | SRS Springs topology | `.psp` | 4-integer header + `iS` keyword in file |
 | PSP2 topology | `.psp` | same as SRS Springs + `PSP2` in comment OR `interaction_type = PSP2` in input file |
 | MGL (self-contained) | `.mgl` | `@` separator + optional `.Box:` header |
@@ -56,7 +57,7 @@ Components read from stores directly — **no prop drilling**.
 
 File type priority: `traj > last > init > conf`
 
-Detection order in `analyzeTopologyFile`: SRS Springs/PSP2 → (2-token header check) → Raspberry → **oxDNA nucleotide** → Flavio → Lorenzo. Format extraction uses `type.split('-').slice(1).join('_')` so `topology-oxdna_nucleotide` → format `oxdna_nucleotide`.
+Detection order in `analyzeTopologyFile`: SRS Springs/PSP2/PHB (4-token header block) → (2-token header check) → Raspberry → **oxDNA nucleotide** → Flavio → Lorenzo. PHB is detected in the 4-token block when `iP`+`iC` are present but `iS` is absent. Format extraction uses `type.split('-').slice(1).join('_')` so `topology-oxdna_nucleotide` → format `oxdna_nucleotide`.
 
 ### oxDNA Nucleotide Format (standard `.top`)
 ```
@@ -136,6 +137,20 @@ Detection (either is sufficient):
 - Neither present → detected as `topology-srs_springs` (renders identically)
 - Parsed by `parsePSP2Topology` (wraps `parseSRSSpringsTopology`, tags `format: 'psp2'`)
 - Springs rendered center-to-center (same as SRS Springs); `srsParticleRadius` used for particle size
+
+### PHB Format (`.phb`)
+Self-contained topology for PHB (Patchy Helix Bead) particle systems. Uses an oxDNA trajectory (`.dat`) alongside.
+```
+<totPar> <strands> <version> <patchySpacer>
+iP <id> <color> <strength> <x> <y> <z> <a1x> <a1y> <a1z> <a2x> <a2y> <a2z>  # patch def (13 tokens)
+iC <colorId> <patchId1> <patchId2> ...                                           # color→patches mapping
+# iK and iM lines (moment of inertia / mass) are parsed but not used for display
+<type> <strandId> <btype> <radius> <mass> [<neighborIdx> <k> <r0> ...]          # one line per particle
+```
+- `btype=100` means no patches for that particle; otherwise `btype` indexes into `iC` to get patch IDs
+- Strand ID maps to `typeIndex` (used for color cycling)
+- Spring connections from body triplets `(neighborIdx, k, r0)` are deduplicated and rendered by `Springs.js`
+- Parsed by `parsePHBTopology` in `topologyParser.js`; returns `particleTypeMapping`, `particleTypes`, `springConnections`, and `srsParticleRadius`
 
 ### Flavio Companion File Lookup (`parseFlavioTopology`)
 `parseFlavioTopology(content, fileMap, options)` resolves the particles and patches files with a multi-step fallback:
