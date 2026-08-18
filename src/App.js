@@ -15,7 +15,8 @@ import { parseTopFile, getParticleType } from "./utils/topologyParser";
 import { buildTrajIndex, parseConfiguration } from "./utils/trajectoryLoader";
 import { applyPeriodicBoundary, applyPeriodicWrapping, computeRotationMatrix } from "./utils/geometryUtils";
 import { selectFallbackTrajectoryFile, createFileMap } from "./utils/fileLoader";
-import { captureScreenshot, exportSceneAsGLTF } from "./utils/exportUtils";
+import { captureScreenshot, captureImageDataURL, exportSceneAsGLTF } from "./utils/exportUtils";
+import { saveColorScheme, colorSchemes } from "./colors";
 import { useParticleStore } from "./store/particleStore";
 import { useUIStore } from "./store/uiStore";
 import { useClusteringStore } from "./store/clusteringStore";
@@ -681,6 +682,134 @@ function App() {
       window.removeEventListener('message', messageListener);
     };
   }, [handleMessage]);
+
+  // useEffect to expose a headless-browser control API for the CLI image generation
+  // tool (cli/generate-image.js). This is intentionally separate from the iframe
+  // postMessage interface: puppeteer drives the top-level page directly, so it can
+  // call these functions synchronously via page.evaluate() instead of round-tripping
+  // through async message events.
+  useEffect(() => {
+    window.__PPVIEW_CLI__ = {
+      version: 1,
+
+      // Load files the same way drag-drop / the iframe `drop` message does.
+      // Returns the same promise handleFilesReceived returns, so callers can await it.
+      loadFiles: (files) => handleFilesReceived(files),
+
+      // True once loading has finished, at least one particle/nucleotide is present,
+      // and the Three.js scene/camera/renderer have mounted (ParticleScene only
+      // mounts once positions are non-empty, so this lags positions by a render pass).
+      isReady: () => {
+        const uiState = useUIStore.getState();
+        const particleState = useParticleStore.getState();
+        return (
+          !uiState.isLoading &&
+          particleState.positions.length > 0 &&
+          !!(uiState.sceneRef && uiState.sceneRef.scene && uiState.sceneRef.camera && uiState.sceneRef.gl)
+        );
+      },
+
+      getState: () => {
+        const particleState = useParticleStore.getState();
+        const { positions, currentBoxSize } = particleState;
+
+        // World-space bounding box (positions are stored offset by +boxSize/2;
+        // rendering re-centers on the origin the same way, see Particles.js).
+        let bounds = null;
+        if (positions.length > 0) {
+          const min = [Infinity, Infinity, Infinity];
+          const max = [-Infinity, -Infinity, -Infinity];
+          for (const pos of positions) {
+            const x = pos.x - currentBoxSize[0] / 2;
+            const y = pos.y - currentBoxSize[1] / 2;
+            const z = pos.z - currentBoxSize[2] / 2;
+            if (x < min[0]) min[0] = x;
+            if (y < min[1]) min[1] = y;
+            if (z < min[2]) min[2] = z;
+            if (x > max[0]) max[0] = x;
+            if (y > max[1]) max[1] = y;
+            if (z > max[2]) max[2] = z;
+          }
+          bounds = {
+            min,
+            max,
+            center: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2],
+          };
+        }
+
+        return {
+          isLoading: useUIStore.getState().isLoading,
+          totalConfigs: particleState.totalConfigs,
+          currentConfigIndex: particleState.currentConfigIndex,
+          particleCount: positions.length,
+          boxSize: currentBoxSize,
+          particleRadius: particleState.particleRadius,
+          bounds,
+        };
+      },
+
+      // Jump to a specific trajectory frame (0-indexed).
+      setConfigIndex: (index) => {
+        useParticleStore.getState().setCurrentConfigIndex(index);
+      },
+
+      // Toggle scene/UI elements. Accepts the same keys as the iframe `view_settings` object.
+      setViewSettings: (settings = {}) => {
+        const ui = useUIStore.getState();
+        if ("Box" in settings) ui.setShowSimulationBox(!!settings.Box);
+        if ("BackdropPlanes" in settings) ui.setShowBackdropPlanes(!!settings.BackdropPlanes);
+        if ("CoordinateAxis" in settings) ui.setShowCoordinateAxis(!!settings.CoordinateAxis);
+        if ("PatchLegend" in settings) ui.setShowPatchLegend(!!settings.PatchLegend);
+        if ("ParticleLegend" in settings) ui.setShowParticleLegend(!!settings.ParticleLegend);
+        if ("ClusteringPane" in settings) ui.setShowClusteringPane(!!settings.ClusteringPane);
+        if ("Controls" in settings) ui.setIsControlsVisible(!!settings.Controls);
+        if ("ColorScheme" in settings && colorSchemes[settings.ColorScheme]) {
+          saveColorScheme(settings.ColorScheme);
+          ui.setCurrentColorScheme(settings.ColorScheme);
+        }
+        invalidateScene();
+      },
+
+      // Directly position/aim the camera. `position` and `target` are [x, y, z] arrays.
+      setCamera: ({ position, target, fov, zoom } = {}) => {
+        const ref = useUIStore.getState().sceneRef;
+        if (!ref || !ref.camera) return false;
+        const { camera, controls } = ref;
+
+        if (Array.isArray(position) && position.length === 3) {
+          camera.position.set(position[0], position[1], position[2]);
+        }
+        if (typeof fov === "number" && camera.isPerspectiveCamera) {
+          camera.fov = fov;
+        }
+        if (typeof zoom === "number") {
+          camera.zoom = zoom;
+        }
+        if (Array.isArray(target) && target.length === 3) {
+          if (controls) {
+            controls.target.set(target[0], target[1], target[2]);
+          } else {
+            camera.lookAt(target[0], target[1], target[2]);
+          }
+        }
+
+        camera.updateProjectionMatrix();
+        if (controls) controls.update();
+        invalidateScene();
+        return true;
+      },
+
+      // Renders the scene and resolves with a PNG data URL (no browser download).
+      captureImage: (options = {}) => {
+        const ref = useUIStore.getState().sceneRef;
+        return captureImageDataURL(ref, options);
+      },
+    };
+
+    return () => {
+      delete window.__PPVIEW_CLI__;
+    };
+  }, [handleFilesReceived, invalidateScene]);
 
   // useEffect to handle key presses
   useEffect(() => {

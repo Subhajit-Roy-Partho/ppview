@@ -162,7 +162,7 @@ const SceneContent = React.memo(function SceneContent({
   // Provide complete scene data to parent component
   useEffect(() => {
     if (onSceneReady && scene && camera && gl) {
-      onSceneReady({ scene, camera, gl, invalidate });
+      onSceneReady({ scene, camera, gl, invalidate, controls: controlsRef.current });
     }
   }, [onSceneReady, scene, camera, gl, invalidate]);
 

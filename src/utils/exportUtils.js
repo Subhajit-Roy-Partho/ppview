@@ -71,6 +71,66 @@ export const captureScreenshot = (sceneRef, currentConfigIndex, resolutionScale 
   }
 };
 
+// Renders the current scene and resolves with a PNG data URL, without triggering
+// a browser download. Used by the CLI image generation API (window.__PPVIEW_CLI__)
+// and can be reused anywhere a programmatic capture is needed.
+export const captureImageDataURL = (sceneRef, options = {}) => {
+  const { resolutionScale = 1.0, background = null } = options;
+
+  return new Promise((resolve, reject) => {
+    if (!sceneRef || !sceneRef.gl || !sceneRef.scene || !sceneRef.camera) {
+      reject(new Error('Scene not ready for capture'));
+      return;
+    }
+
+    const { scene, gl, invalidate } = sceneRef;
+    const previousBackground = scene.background;
+
+    if (background === 'transparent') {
+      scene.background = null;
+    } else if (background) {
+      scene.background = new THREE.Color(background);
+    }
+
+    if (invalidate) {
+      invalidate();
+    }
+
+    // Wait for the render (and any post-processing pipeline) to complete before reading pixels.
+    setTimeout(() => {
+      try {
+        const canvas = gl.domElement;
+        if (!canvas) {
+          throw new Error('Canvas not found');
+        }
+
+        let dataURL;
+        if (resolutionScale !== 1.0 && resolutionScale < 1.0) {
+          const tempCanvas = document.createElement('canvas');
+          const originalWidth = canvas.width / resolutionScale;
+          const originalHeight = canvas.height / resolutionScale;
+          tempCanvas.width = originalWidth;
+          tempCanvas.height = originalHeight;
+
+          const ctx = tempCanvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(canvas, 0, 0, originalWidth, originalHeight);
+          dataURL = tempCanvas.toDataURL('image/png');
+        } else {
+          dataURL = canvas.toDataURL('image/png');
+        }
+
+        scene.background = previousBackground;
+        resolve(dataURL);
+      } catch (error) {
+        scene.background = previousBackground;
+        reject(error);
+      }
+    }, 250);
+  });
+};
+
 // Function to export the scene as GLTF
 export const exportSceneAsGLTF = (options) => {
   const {
