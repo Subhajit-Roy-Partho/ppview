@@ -615,16 +615,16 @@ const SCENARIOS = {
       const m = h.textContent.match(/[(]([0-9]+)[)]/);
       return m ? Number(m[1]) : 0;
     };
-    const clickEmpty = () => {
-      const p = emptyPoint();
-      if (p) return click(p[0], p[1]);
-      // No background anywhere: the selection fills the frame, as one enlarged
-      // bead does once framed, so there is nothing to click that is not a bead.
-      // Use the panel's own clear button, which does the same thing.
-      byLabel('Clear selection')?.click();
-    };
+    // Only for the clean-up after framing, where one enlarged bead can fill the
+    // frame and leave no background to click: use the panel's own clear button.
     const clear = async () => {
-      clickEmpty();
+      const p = emptyPoint();
+      if (p) click(p[0], p[1]);
+      else {
+        const button = byLabel('Clear selection');
+        assert(button, 'no empty point to click and no "Clear selection" button either');
+        button.click();
+      }
       await waitFor(() => selectedCount() === 0, 2000);
     };
     // Try candidates in turn: a single point can sit on geometry that is drawn
@@ -665,7 +665,9 @@ const SCENARIOS = {
 
     click(hit[0], hit[1]);
     assert(await waitFor(() => selectedCount() === 1, 2000), 'reselect');
-    clickEmpty();
+    const empty = emptyPoint();
+    assert(empty, 'the scene must leave empty space to click, to test that it clears the selection');
+    click(empty[0], empty[1]);
     assert(await waitFor(() => selectedCount() === 0, 2000),
       'a click on empty space must clear the selection');
 

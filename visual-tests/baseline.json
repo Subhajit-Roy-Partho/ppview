@@ -279,7 +279,7 @@
     "__assertions": 4
   },
   "raspberry/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "oxdna/load": {
     "loaded": {
@@ -492,7 +492,7 @@
     "__assertions": 4
   },
   "oxdna/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "srs/load": {
     "loaded": {
@@ -956,7 +956,7 @@
     "__assertions": 30
   },
   "lorenzo/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "lorenzo/appearance": {
     "legendsOn": {
@@ -1464,7 +1464,7 @@
     "__assertions": 4
   },
   "impostor/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "impostor-oxdna/load": {
     "loaded": {
@@ -1594,7 +1594,7 @@
     "__assertions": 0
   },
   "impostor-oxdna/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "impostor-raspberry/load": {
     "loaded": {
@@ -1724,7 +1724,7 @@
     "__assertions": 0
   },
   "impostor-raspberry/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "mrdna/load": {
     "loaded": {
@@ -1890,6 +1890,6 @@
     "__assertions": 0
   },
   "mrdna/selection": {
-    "__assertions": 10
+    "__assertions": 12
   }
 }

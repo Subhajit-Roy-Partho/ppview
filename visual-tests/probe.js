@@ -222,7 +222,7 @@ const pickTargets = (max = 12) => {
  * background, for "click on empty space". A fixed corner is not safe: a large
  * structure, enlarged or framed closer, can cover it, and the click then picks
  * a particle instead of clearing. Tries the corners and edge midpoints with the
- * same colour test as pickTargets, then any gap found by a coarse scan. Returns null when the structure covers the
+ * same difference-from-background test (the edge's median colour), then any gap found by a coarse scan. Returns null when the structure covers the
  * whole frame (framing one enlarged bead can do that), which the caller must
  * handle.
  */
@@ -235,16 +235,28 @@ const emptyPoint = () => {
   const ctx = c.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(canvas, 0, 0, w, h);
   const d = ctx.getImageData(0, 0, w, h).data;
-  const lit = (x, y) => {
-    x = Math.min(w - 1, Math.max(0, x)); y = Math.min(h - 1, Math.max(0, y));
-    const i = (y * w + x) * 4;
-    return Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]) > 45;
-  };
   const m = 3;
   const candidates = [
     [m, h - 1 - m], [m, m], [w - 1 - m, m], [w - 1 - m, h - 1 - m],
     [w >> 1, m], [w >> 1, h - 1 - m], [m, h >> 1], [w - 1 - m, h >> 1],
   ];
+  // Background is the median colour of the frame's edge, not "anything grey":
+  // mrdna's orientation beads and bonds are grey, so a chroma test calls them
+  // empty. Per-channel median survives a few edge points landing on structure.
+  const median = (vs) => vs.sort((a, b) => a - b)[vs.length >> 1];
+  const edge = candidates.map(([x, y]) => [0, 1, 2].map(ch => d[(y * w + x) * 4 + ch]));
+  let bg = [0, 1, 2].map(ch => median(edge.map(px => px[ch])));
+  // When all eight edge pixels agree they are bare background: remember it. A
+  // structure framed close can cover the whole edge, and then the edge median
+  // is the structure's colour, so fall back to what the page last showed.
+  const flat = [0, 1, 2].every(ch => Math.max(...edge.map(px => px[ch])) - Math.min(...edge.map(px => px[ch])) <= 6);
+  if (flat) window.__ppviewBackground = bg;
+  else if (window.__ppviewBackground) bg = window.__ppviewBackground;
+  const lit = (x, y) => {
+    x = Math.min(w - 1, Math.max(0, x)); y = Math.min(h - 1, Math.max(0, y));
+    const i = (y * w + x) * 4;
+    return Math.max(Math.abs(d[i] - bg[0]), Math.abs(d[i+1] - bg[1]), Math.abs(d[i+2] - bg[2])) > 24;
+  };
   const empty = (x, y) => {
     for (let dy = -2; dy <= 2; dy += 2)
       for (let dx = -2; dx <= 2; dx += 2) if (lit(x + dx, y + dy)) return false;

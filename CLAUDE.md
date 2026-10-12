@@ -507,18 +507,20 @@ first is deliberate — a stale render target left bound would otherwise swallow
 
 ## Visual regression tests (`visual-tests/`)
 
-Headless Chrome drives the real app over CDP: 7 fixtures (one per format, each
-laid out as 5 DBSCAN-separable blobs, plus the impostor path as a `?impostors=1`
-override) x 8 scenarios (load, playback, detail/radius, clustering,
-clusterControls, selection, appearance, overlays). It records pixel-bucket counts
+Headless Chrome drives the real app over CDP: 11 fixtures (one per format, the
+impostor path as three `?impostors=1` overrides, and `migrate`) x 9 scenarios
+(load, playback, detail/radius, clustering, clusterControls, selection,
+appearance, overlays, kymograph). Most fixtures are laid out as 5 DBSCAN-separable
+blobs; `mrdna` is the exception, a real structure (a tetrahelix), so it is
+excluded from `clustering`, whose assertions need five blobs. It records pixel-bucket counts
 rather than image hashes, so it tolerates antialiasing jitter but moves decisively
 when geometry appears, vanishes, resizes or loses its colour.
 
 **Not every scenario runs against every fixture** — `SCENARIO_FORMATS` in
 `scenarios.js` says which, and is the suite's coverage argument in one table.
-34 jobs, ~230s; the full cross-product would be 90.
+38 jobs, ~310s; the full cross-product would be 99.
 
-Three of the nine fixtures exist only to exercise a shader: `impostor`,
+Three of the eleven fixtures exist only to exercise a shader: `impostor`,
 `impostor-oxdna` and `impostor-raspberry` load ordinary files with `?impostors=1`,
 because the threshold is 50,000 particles and every fixture here is 40 — without
 them the impostor shaders would have no coverage at all, and a shader that fails
@@ -536,7 +538,7 @@ is that **scene-wide controls reach every renderer**; formats sharing a renderer
 set cannot make it twice. `flavio` draws exactly what `lorenzo` draws and `mgl` a
 subset of it, so they earn their place by *loading* — a parser and a detection
 path each — and run the scenarios where that is the subject. A scenario missing
-from the table aborts the run rather than quietly fanning out to all seven.
+from the table aborts the run rather than quietly fanning out to every fixture.
 
 - `edges` counts horizontal gradient: colour buckets cannot see white geometry
   against a light background, which is exactly how the invisible-bead bug hid.
