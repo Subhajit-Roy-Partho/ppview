@@ -4,6 +4,7 @@ import { parseFrame, loadWasmCore } from '../wasm/wasmCore';
 import { createFrameCache } from './frameCache';
 import { getParticleType } from '../formats/parsers/particleType';
 import { convertMGLToPPViewFormat } from '../utils/mglParser';
+import { readMrdnaFrame, mrdnaParticles, frameTime, frameEnergy } from './mrdnaFrames';
 import { LoadError } from './staleness';
 
 /**
@@ -30,6 +31,15 @@ function mglFrame(file, frameNumber, scene) {
   scene.setCurrentBoxSize(ppview.boxSize);
   scene.setCurrentTime(frameNumber);   // MGL frames carry no simulation time
   scene.setCurrentEnergy([0]);
+}
+
+/** mrdna frames are bare doubles: one slice, no parsing, no wrap. */
+async function mrdnaFrame(source, frameNumber, scene) {
+  const pos = await readMrdnaFrame(source, frameNumber);
+  scene.setPositions(mrdnaParticles(pos, source.n, source.kind, source.box));
+  scene.setCurrentBoxSize(source.box);
+  scene.setCurrentTime(frameTime(source, frameNumber));
+  scene.setCurrentEnergy(frameEnergy(source, frameNumber));
 }
 
 /**
@@ -129,6 +139,12 @@ export async function loadFrame({ file, index, frameNumber, topData, scene }) {
   }
   if (!topData) {
     throw new LoadError('No topology loaded, so the frame cannot be interpreted.');
+  }
+
+  if (file.mrdna) {
+    await mrdnaFrame(file, frameNumber, scene);
+    scene.setLoadedConfigIndex?.(frameNumber);
+    return;
   }
 
   if (file.mglTrajectoryData) {

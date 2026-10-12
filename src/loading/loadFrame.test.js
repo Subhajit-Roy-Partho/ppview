@@ -173,3 +173,27 @@ describe('the frame the scene is showing', () => {
     })).resolves.toBeUndefined();
   });
 });
+
+describe('loadFrame for mrdna', () => {
+  it('hands the requested frame to the scene in oxDNA units, with its step and energy', async () => {
+    const n = 2;
+    const frame1 = Float64Array.from([0, 0, 0, 8.518, 0, 0]);
+    const traj = {
+      size: frame1.byteLength,
+      slice: (a, b) => ({ arrayBuffer: async () => frame1.buffer.slice(a, b) }),
+    };
+    const source = {
+      mrdna: true, n, kind: Uint8Array.from([0, 1]),
+      modelPos: Float64Array.from([0, 0, 0, 0, 0, 0]),
+      traj, final: null, frameCount: 2,
+      energy: [{ step: 500, total: -12.5, bond: 1, angle: 2, dihedral: 3, nonbonded: 4 }],
+      box: [10, 10, 10],
+    };
+    const scene = sceneOf();
+    await loadFrame({ file: source, index: [0, 1], frameNumber: 1, topData: { format: 'mrdna' }, scene });
+    expect(scene.calls.time).toBe(500);
+    expect(scene.calls.energy).toEqual([-12.5, 1, 2, 3, 4]);
+    expect(scene.calls.boxSize).toEqual([10, 10, 10]);
+    expect(scene.calls.positions[1].x - scene.calls.positions[0].x).toBeCloseTo(1);
+  });
+});
