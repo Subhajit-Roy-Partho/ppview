@@ -11,9 +11,12 @@ This folder contains feature documentation and implementation details for PPView
 
 ### File Format Support
 - **[MGL Format Support](MGL_FORMAT_SUPPORT.md)** - Support for MGL (Molecular Graphics Laboratory) file format
+- **[mrdna Bead Model Support](MRDNA_FORMAT_SUPPORT.md)** - The coarse-grained DNA bead model and Brownian-dynamics trajectories written by the mrdna engine
 
 ## Main Documentation
 - **[Main README](../README.md)** - Project overview and getting started guide
+- **[Iframe Messaging](../IFRAME_MESSAGING.md)** - Embedding PPView and driving it with `postMessage`
+- **[Developer Guide](../CLAUDE.md)** - Architecture, conventions and the reasoning behind them
 - **[Warp Integration](../WARP.md)** - Integration with Warp AI terminal
 
 ---
