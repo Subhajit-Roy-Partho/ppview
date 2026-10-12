@@ -122,12 +122,12 @@ the existing readouts work unchanged.
 
 ## Rendering (`MrdnaBeads`)
 
-Two `InstancedLayer`s, so impostors, picking and redraw come for free:
+Two `InstancedLayer`s, so picking and redraw come for free (impostors are per renderer and not enabled here):
 
 - **Beads**: spheres. `ds` and `ss` radius ∝ `nts^(1/3)`, normalised so a 5 bp
   `ds` bead is about one helix radius (~1 nm ≈ 1.17 su). `or` beads are fixed
   and small (0.25 su). An `or` bead sits 1.5 Å (0.18 su) off the axis, inside
-  its `ds` bead, so it is drawn on the `ds` bead's surface in the direction it
+  its `ds` bead, so it is drawn just outside its `ds` bead, on a short stalk, in the direction it
   really points, and the panel says so. Its stored position, the one the
   selection panel reports, is not changed. Colour by kind: `ds` steel blue, `ss` orange, `or` grey,
   unknown neutral. Selected beads are yellow, as elsewhere.
@@ -143,8 +143,8 @@ Two `InstancedLayer`s, so impostors, picking and redraw come for free:
   A bond follows its two beads: it is hidden if either is hidden.
 - `sphereSegments` (Detail) drives bead and bond geometry. Bead radius and
   bond thickness scale by `particleRadius / baseParticleRadius`, as other
-  renderers with intrinsic geometry do; `onLoad` sets the baseline so the
-  ratio is 1 at load. Every effect ends in `invalidate()` (the layer does it).
+  renderers with intrinsic geometry do; the ratio is 1 at load because every load
+  calls `resetParticleRadius()`. Every effect ends in `invalidate()` (the layer does it).
 
 ## UI
 

@@ -23,6 +23,9 @@ const FORMATS = [
   { name: 'raspberry', files: F('raspberry.top', 'raspberry.dat') },
   { name: 'oxdna', files: F('oxdna.top', 'oxdna.dat') },
   { name: 'srs', files: F('srs.psp', 'srs.dat') },
+  // The mrdna bead model: a binary model and binary frames, its own loader and
+  // its own renderer (beads plus bond cylinders).
+  { name: 'mrdna', files: F('mrdna.model', 'mrdna.traj', 'mrdna.energy') },
   { name: 'lorenzo', files: F('lorenzo.top', 'lorenzo.dat', 'patchesA.dat', 'patchesB.dat') },
   { name: 'flavio', files: F('flavio.top', 'flavio.dat', 'particles.txt', 'patches.txt') },
   // The same structure drawn as impostors. Forced on by a query parameter,
@@ -82,13 +85,14 @@ const FORMATS = [
  * | raspberry | spheres + repulsion beads |
  * | oxdna     | four nucleotide meshes |
  * | srs       | spheres + patch cones + spring cylinders |
+ * | mrdna     | bead spheres + bond cylinders |
  * | impostor  | the impostor shader |
  *
  * So `flavio` and `mgl` earn their place by *loading* — a parser and a detection
  * path each — not by drawing something new, and they run the scenarios where
  * that is the subject.
  */
-const RENDERERS = ['raspberry', 'oxdna', 'srs', 'lorenzo', 'impostor'];
+const RENDERERS = ['raspberry', 'oxdna', 'srs', 'lorenzo', 'impostor', 'mrdna'];
 // The two fixtures that exist only to exercise a shader. They join the scenarios
 // where the *representation* is the subject — does it compile, does it draw the
 // right shape, does the radius reach it, can it be clicked — and stay out of
@@ -96,9 +100,9 @@ const RENDERERS = ['raspberry', 'oxdna', 'srs', 'lorenzo', 'impostor'];
 // both representations share.
 const NEW_IMPOSTORS = ['impostor-oxdna', 'impostor-raspberry'];
 // Springs are not pickable and srs otherwise picks exactly as lorenzo does.
-const PICKABLE = ['raspberry', 'oxdna', 'lorenzo', 'impostor', ...NEW_IMPOSTORS];
+const PICKABLE = ['raspberry', 'oxdna', 'lorenzo', 'impostor', 'mrdna', ...NEW_IMPOSTORS];
 // MGL frames live in memory; every other format slices them out of a file.
-const LOADERS = ['mgl', 'oxdna'];
+const LOADERS = ['mgl', 'oxdna', 'mrdna'];
 // Scene-wide behaviour — one lighting rig, one control bar, one set of stores.
 // A second fixture would re-measure the same code against different pixels.
 const ANY_ONE = ['lorenzo'];

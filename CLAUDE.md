@@ -70,7 +70,8 @@ src/
 | Raspberry topology | `.top` | `iP`/`iR`/`iC` keywords in file |
 | SRS Springs topology | `.psp` | 4-integer header + `iS` keyword in file |
 | MGL (self-contained) | `.mgl` | `@` separator, **no** `.Box:` header |
-| Trajectory | `.dat`, `.traj`, `.conf` | content keywords |
+| mrdna bead model | `.model` + `.traj`/`.final` (+ `.energy`) | `.model` by magic number `0x4D52444E4131`; `.traj`/`.final` by name **and** a binary head; `.energy` by its `# step E_total` header |
+| Trajectory | `.dat`, `.traj`, `.conf` | content keywords; a binary `.traj` is mrdna's |
 | MGL Trajectory | `.mgl` with `.Box:` | **any** `.Box:` header, even one |
 | Clusters | `.json` | `clusters` array, or entries with `particles`/`indices`/`ids` |
 | Cluster/bond observable | `.txt`, `.dat` | `n -> (…)` arrows, a `# step n N n` header, or `((i p), (j p))` tuples |
@@ -155,6 +156,30 @@ iS <id> <k> <r0> <x> <y> <z>
 - `App.js` sets `particleRadius` from `srsParticleRadius` after parsing
 - Springs rendered by `Springs.js` as gray cylinders; springs longer than `min(box)/2` are hidden
 - Patches assigned per-particle from body line; `particlesByType` uses first particle's type as representative per strand
+
+### mrdna bead model (`.model` + `.traj`)
+Written by the Rust engine of the mrdna re-implementation in `../mrdna_project`
+(`mrdna_rs run`, via `rsbridge.rs_run`). Lengths are Å and are divided by
+`OX2A = 8.518` on load.
+
+- **Loaded by its own branch** (`loading/loadMrdna.js`), like MGL: the model is
+  binary, so it never passes through `parseTopology`. Frame 0 is the model's
+  own positions (the mapped design, before minimisation); frame k is `.traj`
+  frame k-1, or `.final`. `.energy` gives each frame its step and energies.
+- **Kinds and bond types are recovered, not stored** (`classifyMrdna`):
+  orientation beads carry 0 nucleotides, ds beads are bonded to one, the rest
+  are ss; a ds–ds bond with a twist dihedral (orientation beads at both ends)
+  across it is a helix bond, any other is a crossover. Verified bead for bead
+  against the Python model at 5, 3 and 1 bp/bead; a model without
+  orientation beads is labelled `bead`/`bond` rather than guessed.
+- **Centred, never wrapped.** The model has no box; one is made around frame 0.
+  Wrapping would cut bonds.
+- **Orientation beads are drawn just outside their ds bead, on a short stalk** (the orient bond), in the direction they point: really they sit 1.5 Å off the axis, inside it. The selection panel reports the true position.
+- `.traj` is also an oxDNA trajectory name, so detection reads 64 bytes first
+  and only a binary head makes it mrdna.
+- Fixtures: `python3 visual-tests/make-mrdna-fixtures.py` (needs
+  `cargo build --release` in `mrdna_project/rust`). It records what the Python
+  model says each bead and bond is, which `mrdna.test.js` checks against.
 
 ### Flavio Companion File Lookup (`parseFlavioTopology`)
 `parseFlavioTopology(content, fileMap, options)` resolves the particles and patches files with a multi-step fallback:
