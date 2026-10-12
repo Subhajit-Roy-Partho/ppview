@@ -1,5 +1,6 @@
 import { detectObservable } from '../observables';
 import { isObservablesConfig } from '../observables/config';
+import { hasMrdnaMagic } from '../parsers/mrdna';
 
 /**
  * Content signatures for every supported file type.
@@ -418,4 +419,37 @@ export function isObservableFile(lines) {
  */
 export function isObservablesConfigFile(lines) {
   return isObservablesConfig(lines.join('\n'));
+}
+
+/** The mrdna engine's `.model`: a binary file opening with its magic number. */
+export function isMrdnaModel(bytes) {
+  return hasMrdnaMagic(bytes);
+}
+
+// Text never holds a NUL or most control characters; packed doubles almost
+// always do within a few values.
+function looksBinary(bytes) {
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    if (b === 0 || b === 127 || (b < 32 && b !== 9 && b !== 10 && b !== 13)) return true;
+  }
+  return false;
+}
+
+/**
+ * The mrdna engine's frames: `.traj` (every frame) or `.final` (the last one),
+ * raw doubles with no header. Named like oxDNA's text trajectories, so the
+ * name alone is not enough — only a binary head makes one ours.
+ */
+export function mrdnaFramesRole(bytes, name) {
+  if (!bytes || bytes.length === 0 || !looksBinary(bytes)) return null;
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.traj')) return 'mrdna-trajectory';
+  if (lower.endsWith('.final')) return 'mrdna-final';
+  return null;
+}
+
+/** The engine's energy log: `# step E_total E_bond ...`. */
+export function isMrdnaEnergy(lines) {
+  return lines.length > 0 && /^#\s*step\s+E_total\b/.test(lines[0]);
 }

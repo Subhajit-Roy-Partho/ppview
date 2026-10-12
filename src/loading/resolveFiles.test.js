@@ -93,3 +93,14 @@ describe('pickTrajectoryFile', () => {
     expect(pickTrajectoryFile({}, [named('system.top'), named('readme.md')])).toBeNull();
   });
 });
+
+describe('classifyDrop with mrdna files', () => {
+  it('treats an mrdna model as a simulation, not an overlay drop', () => {
+    const categorized = { mrdnaModels: [{ name: 'a.model' }], clusterFiles: [{ name: 'c.json' }], observableFiles: [] };
+    expect(classifyDrop(categorized, { sceneIsLoaded: true })).toBe('simulation');
+  });
+  it('treats a lone mrdna trajectory as a simulation drop, so its error is reported', () => {
+    const categorized = { mrdnaTrajectories: [{ name: 'a.traj' }], clusterFiles: [{ name: 'c.json' }], observableFiles: [] };
+    expect(classifyDrop(categorized, { sceneIsLoaded: true })).toBe('simulation');
+  });
+});

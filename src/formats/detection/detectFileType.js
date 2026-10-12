@@ -12,18 +12,37 @@ import {
   isClusterFile,
   isObservableFile,
   isObservablesConfigFile,
+  isMrdnaModel,
+  mrdnaFramesRole,
+  isMrdnaEnergy,
 } from './signatures';
 
 export async function detectFileType(file) {
   try {
+    // Binary files first: decoding one as text yields garbage that a text
+    // signature could match by accident, and `.traj` is also an oxDNA name.
+    const headBlob = file.slice(0, Math.min(file.size, 64));
+    if (typeof headBlob.arrayBuffer === 'function') {
+      const head = new Uint8Array(await headBlob.arrayBuffer());
+      if (isMrdnaModel(head)) return 'mrdna-model';
+      const framesRole = mrdnaFramesRole(head, file.name);
+      if (framesRole) return framesRole;
+    }
+
     // Read the first few KB of the file to analyze structure
     const chunkSize = Math.min(file.size, 8192); // Read first 8KB
     const chunk = file.slice(0, chunkSize);
     const text = await chunk.text();
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    
+
     if (lines.length === 0) {
       return 'unknown';
+    }
+
+    // Before the observables: its `# step ...` header is the shape a
+    // PatchyBonds header has.
+    if (isMrdnaEnergy(lines)) {
+      return 'mrdna-energy';
     }
 
     // Clusters first: it is JSON, so none of the plain-text signatures below
