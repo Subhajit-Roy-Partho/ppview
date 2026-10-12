@@ -8,7 +8,8 @@ import { centreOnBox, cylinderScratch, cylinderBetweenPoints } from '../../rende
 import useClusterVisuals from '../../rendering/useClusterVisuals';
 import { KIND, BOND, BOND_NAMES } from '../../formats/parsers/mrdna';
 import {
-  MRDNA_COLORS, beadRadius, orientMarker, beadVisible, BOND_THICKNESS, ORIENT_THICKNESS,
+  MRDNA_COLORS, beadRadius, orientMarker, orientMarkerDistance, beadVisibility, bondVisible,
+  pickableIndex, BOND_THICKNESS, ORIENT_THICKNESS,
 } from './geometry';
 
 /**
@@ -54,16 +55,15 @@ function MrdnaBeads() {
     const { kind, nts, parent } = topData;
     const centres = Array.from({ length: n }, (_, i) => centreOnBox(new THREE.Vector3(), positions[i], boxSize));
     const radii = new Float32Array(n);
-    const visible = new Uint8Array(n);
     for (let i = 0; i < n; i++) {
       radii[i] = beadRadius(kind[i], nts[i]) * display.beadScale * radiusScale * appearance[i].scaleFactor;
-      visible[i] = beadVisible(kind[i], appearance[i], display) ? 1 : 0;
     }
+    const visible = beadVisibility(kind, parent, appearance, display);
     const real = new THREE.Vector3();
     for (let i = 0; i < n; i++) {
       if (kind[i] !== KIND.OR || parent[i] < 0) continue;
       real.copy(centres[i]);
-      orientMarker(centres[i], centres[parent[i]], real, radii[parent[i]]);
+      orientMarker(centres[i], centres[parent[i]], real, orientMarkerDistance(radii[parent[i]], radii[i]));
     }
     return { centres, radii, visible };
   }, [ready, n, topData, positions, boxSize, display, radiusScale, appearance]);
@@ -79,10 +79,9 @@ function MrdnaBeads() {
   const scratch = useMemo(cylinderScratch, []);
   const writeBond = useMemo(() => (b, dummy, setColor) => {
     const type = topData.bondType[b];
-    if (!display.bondTypes[BOND_NAMES[type]]) return false;
     const i = topData.bonds[2 * b];
     const j = topData.bonds[2 * b + 1];
-    if (!layout.visible[i] || !layout.visible[j]) return false;
+    if (!bondVisible(BOND_NAMES[type], layout.visible[i], layout.visible[j], display)) return false;
     const thin = Math.min(appearance[i].scaleFactor, appearance[j].scaleFactor);
     const thickness = (type === BOND.ORIENT ? ORIENT_THICKNESS : BOND_THICKNESS) * radiusScale * thin;
     if (!cylinderBetweenPoints(dummy, scratch, layout.centres[i], layout.centres[j], thickness)) return false;
@@ -92,7 +91,7 @@ function MrdnaBeads() {
 
   // A bead that is not drawn cannot be clicked.
   const resolveIndex = useCallback(
-    (instanceId) => (layout?.visible[instanceId] ? instanceId : null), [layout]);
+    (instanceId) => pickableIndex(layout?.visible, instanceId), [layout]);
   useRegisterPickable('mrdna-beads', { meshRef: beadMeshRef, resolveIndex, enabled: ready });
 
   if (!ready) return null;
