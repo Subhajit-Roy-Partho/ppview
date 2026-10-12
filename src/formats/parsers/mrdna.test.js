@@ -50,6 +50,19 @@ describe('parseMrdnaModel', () => {
     expect(() => parseMrdnaModel(buffer)).toThrow(/ends early/);
   });
 
+  it('refuses a huge bond or dihedral count before allocating for it', () => {
+    const n = SYNTHETIC.nts.length;
+    const bondCount = 16 + 40 * n + 72 + 8;          // header, beads, parameters, empty nonbonded list
+    const angleCount = bondCount + 8 + 32 * SYNTHETIC.bonds.length;
+    const dihedralCount = angleCount + 8;
+    [bondCount, dihedralCount].forEach((offset) => {
+      const buffer = encodeMrdnaModel(SYNTHETIC);
+      new DataView(buffer).setUint32(offset, 0x7fffffff, true);
+      expect(() => parseMrdnaModel(buffer)).toThrow(MrdnaFormatError);
+      expect(() => parseMrdnaModel(buffer)).toThrow(/ends early/);
+    });
+  });
+
   it('refuses a model with bytes left over', () => {
     const whole = new Uint8Array(encodeMrdnaModel(SYNTHETIC));
     const longer = new Uint8Array(whole.length + 8);

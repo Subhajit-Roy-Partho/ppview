@@ -74,10 +74,18 @@ export const FORMATS = [
     parse: () => { throw new Error('mrdna models are loaded by loadMrdna'); },
     matches: (topData) => topData?.format === 'mrdna',
     renderer: MrdnaBeads,
+    // The box is synthetic (1.5x extent + 4) and frames are never wrapped.
+    periodic: false,
   },
 ];
 
 const BY_ID = new Map(FORMATS.map(f => [f.id, f]));
+
+/** False only for formats whose box is not a real periodic cell. */
+export const isPeriodic = (topData) => {
+  const format = topData ? FORMATS.find(f => f.matches(topData)) : null;
+  return format?.periodic !== false;
+};
 
 export const getFormat = (id) => BY_ID.get(id) || null;
 

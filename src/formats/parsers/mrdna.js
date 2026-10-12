@@ -65,6 +65,7 @@ function reader(buffer) {
       return out;
     },
     skip(bytes) { need(bytes); o += bytes; },
+    need,
     get offset() { return o; },
   };
 }
@@ -88,6 +89,7 @@ export function parseMrdnaModel(buffer) {
   };
 
   const nBonds = r.u64();
+  r.need(32 * nBonds);                  // before allocating for a corrupt count
   const bonds = new Int32Array(2 * nBonds);
   for (let b = 0; b < nBonds; b++) {
     bonds[2 * b] = index(r.u64());
@@ -96,6 +98,7 @@ export function parseMrdnaModel(buffer) {
   }
   r.skip(40 * r.u64());                 // angles: i j l k θ0
   const nDih = r.u64();
+  r.need(64 * nDih);
   const dihedrals = new Int32Array(4 * nDih);
   for (let d = 0; d < nDih; d++) {
     for (let k = 0; k < 4; k++) dihedrals[4 * d + k] = index(r.u64());

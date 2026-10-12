@@ -64,8 +64,14 @@ describe('MrdnaPanel', () => {
     expect(useUIStore.getState().mrdnaDisplay.beadScale).toBe(0.5);
   });
 
-  it('renders nothing for other formats or when closed', () => {
+  it('renders nothing for other formats', () => {
     useParticleStore.setState({ topData: { format: 'lorenzo' } });
+    const { container } = render(<MrdnaPanel />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('renders nothing when closed', () => {
+    useUIStore.setState({ showMrdnaPanel: false });
     const { container } = render(<MrdnaPanel />);
     expect(container).toBeEmptyDOMElement();
   });
