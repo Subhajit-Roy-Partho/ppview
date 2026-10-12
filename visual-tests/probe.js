@@ -218,6 +218,49 @@ const pickTargets = (max = 12) => {
 };
 
 /**
+ * A point in client coordinates (relative to the canvas) that is actually
+ * background, for "click on empty space". A fixed corner is not safe: a large
+ * structure, enlarged or framed closer, can cover it, and the click then picks
+ * a particle instead of clearing. Tries the corners and edge midpoints with the
+ * same colour test as pickTargets, then any gap found by a coarse scan. Returns null when the structure covers the
+ * whole frame (framing one enlarged bead can do that), which the caller must
+ * handle.
+ */
+const emptyPoint = () => {
+  const canvas = document.querySelector('canvas');
+  const rect = canvas.getBoundingClientRect();
+  const w = 480, h = Math.max(1, Math.round(canvas.height * (w / canvas.width)));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(canvas, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const lit = (x, y) => {
+    x = Math.min(w - 1, Math.max(0, x)); y = Math.min(h - 1, Math.max(0, y));
+    const i = (y * w + x) * 4;
+    return Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]) > 45;
+  };
+  const m = 3;
+  const candidates = [
+    [m, h - 1 - m], [m, m], [w - 1 - m, m], [w - 1 - m, h - 1 - m],
+    [w >> 1, m], [w >> 1, h - 1 - m], [m, h >> 1], [w - 1 - m, h >> 1],
+  ];
+  const empty = (x, y) => {
+    for (let dy = -2; dy <= 2; dy += 2)
+      for (let dx = -2; dx <= 2; dx += 2) if (lit(x + dx, y + dy)) return false;
+    return true;
+  };
+  for (const [x, y] of candidates) {
+    if (empty(x, y)) return [x * rect.width / w, y * rect.height / h];
+  }
+  // A structure framed close can cover every edge too; take any gap in it.
+  for (let y = 4; y < h - 4; y += 4)
+    for (let x = 4; x < w - 4; x += 4)
+      if (empty(x, y)) return [x * rect.width / w, y * rect.height / h];
+  return null;
+};
+
+/**
  * Assert an invariant by throwing, rather than recording it as a 0/1.
  *
  * The runner only reports a numeric diff when it moves by more than
