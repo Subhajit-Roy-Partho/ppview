@@ -1,5 +1,6 @@
 import Particles from '../components/Particles';
 import OxDNANucleotides from '../components/OxDNANucleotides';
+import MrdnaBeads from '../components/MrdnaBeads';
 import { parseRaspberryTopology } from './parsers/raspberry';
 import { parseSRSSpringsTopology } from './parsers/srsSprings';
 import { parseOxDNANucleotideTopology } from './parsers/oxdnaNucleotide';
@@ -64,6 +65,15 @@ export const FORMATS = [
     parse: (content, { lines, fileMap }) => parseLorenzoTopology(lines, fileMap),
     matches: () => false,
     renderer: Particles,
+  },
+  {
+    id: 'mrdna',
+    label: 'mrdna beads',
+    // Loaded by its own branch (loading/loadMrdna.js), never through
+    // parseTopology: its topology is a binary model, not a text .top.
+    parse: () => { throw new Error('mrdna models are loaded by loadMrdna'); },
+    matches: (topData) => topData?.format === 'mrdna',
+    renderer: MrdnaBeads,
   },
 ];
 

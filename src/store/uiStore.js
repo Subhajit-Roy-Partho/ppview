@@ -45,6 +45,14 @@ export const useUIStore = create((set) => ({
   // UI visibility
   isControlsVisible: true,
   showClusteringPane: false,
+  // The mrdna bead panel. Opens with an mrdna run: what it controls is the
+  // first thing anyone looking at beads wants to change.
+  showMrdnaPanel: true,
+  mrdnaDisplay: {
+    showOrient: true,
+    beadScale: 1,
+    bondTypes: { helix: true, crossover: true, ss: true, junction: true, orient: true, bond: true },
+  },
   
   // File loading state
   filesDropped: false,
@@ -112,6 +120,15 @@ export const useUIStore = create((set) => ({
   setShowStats: (show) => set({ showStats: show }),
   setIsControlsVisible: (visible) => set({ isControlsVisible: visible }),
   setShowClusteringPane: (show) => set({ showClusteringPane: show }),
+  setShowMrdnaPanel: (show) => set({ showMrdnaPanel: show }),
+  setMrdnaShowOrient: (on) => set(state => ({ mrdnaDisplay: { ...state.mrdnaDisplay, showOrient: on } })),
+  setMrdnaBeadScale: (scale) => set(state => ({ mrdnaDisplay: { ...state.mrdnaDisplay, beadScale: scale } })),
+  setMrdnaBondType: (name, on) => set(state => ({
+    mrdnaDisplay: {
+      ...state.mrdnaDisplay,
+      bondTypes: { ...state.mrdnaDisplay.bondTypes, [name]: on },
+    },
+  })),
   setFilesDropped: (dropped) => set({ filesDropped: dropped }),
   setIsLoading: (loading) => set({ isLoading: loading }),
   // A no-op when the message is unchanged: this is written from effects and

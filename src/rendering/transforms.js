@@ -213,6 +213,15 @@ export function cylinderBetween(dummy, scratch, posA, posB, boxSize, thickness) 
   return layCylinder(dummy, scratch, scratch.v1, scratch.delta, distance, thickness);
 }
 
+/**
+ * A cylinder between two points already in scene space, with no periodic
+ * filter — for structures that are not periodic, where a long bond is real.
+ */
+export function cylinderBetweenPoints(dummy, scratch, a, b, thickness) {
+  scratch.delta.copy(b).sub(a);
+  return layCylinder(dummy, scratch, a, scratch.delta, scratch.delta.length(), thickness);
+}
+
 /** Scratch for `patchTip`, one set per renderer. */
 export function patchScratch() {
   return {
