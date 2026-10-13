@@ -4,11 +4,12 @@ import { useOverlayStore, COMPUTED_VIEW } from '../../store/overlayStore';
 import { useClusteringStore, isSceneRestricted } from '../../store/clusteringStore';
 import { useParticleStore } from '../../store/particleStore';
 import { clearClustering } from '../../store/commands';
+import { useUIStore } from '../../store/uiStore';
 import {
   PlayIcon, PauseIcon, ResetIcon, SpeedIcon, TagIcon, CircleIcon,
   LayersIcon, ChartIcon, CameraIcon, DownloadIcon, BoxIcon, RulerIcon,
   ChevronUpIcon, ChevronDownIcon, CloseIcon, AxisIcon, LightbulbIcon,
-  StepBackIcon, StepForwardIcon, ActivityIcon, BondIcon, CentreBondIcon,
+  StepBackIcon, StepForwardIcon, ActivityIcon, BondIcon, CentreBondIcon, BeadsIcon,
 } from '../Icons';
 
 /**
@@ -84,6 +85,11 @@ function ControlBar(props) {
   // Bonds only exist while a cluster/bond observable is the pane's source, and
   // a toggle for something that is never there is decoration.
   const hasBonds = useParticleStore(state => state.bonds !== null);
+  // Shown only for an mrdna run, like the bonds toggle: a control for a panel
+  // that cannot appear is decoration.
+  const isMrdna = useParticleStore(state => state.topData?.format === 'mrdna');
+  const showMrdnaPanel = useUIStore(state => state.showMrdnaPanel);
+  const setShowMrdnaPanel = useUIStore(state => state.setShowMrdnaPanel);
   const clusterCount = useClusteringStore(state => state.clusterCount);
   const sceneIsRestricted = useClusteringStore(isSceneRestricted);
   const activeOverlayId = useOverlayStore(state => state.activeOverlayId);
@@ -253,6 +259,9 @@ function ControlBar(props) {
 
               <div className="toggle-group" role="group" aria-label="Tools">
                 <ToggleBtn checked={showClusteringPane} onChange={setShowClusteringPane} icon={<ChartIcon size={17} />} label="Clustering" />
+                {isMrdna && (
+                  <ToggleBtn checked={showMrdnaPanel} onChange={setShowMrdnaPanel} icon={<BeadsIcon size={17} />} label="mrdna beads" />
+                )}
                 <ToolBtn
                   onClick={() => setIsLightingControlsModalOpen(!isLightingControlsModalOpen)}
                   active={isLightingControlsModalOpen}
@@ -304,7 +313,8 @@ function ControlBar(props) {
 
               {/* The scheme only describes the default view; under an overlay it
                   controls nothing visible, so showing it would be misleading. */}
-              {!overlays.some(o => o.id === activeOverlayId) && <ColorSchemeSelector />}
+              {/* mrdna beads and bonds have fixed colours, so the scheme drives nothing. */}
+              {!isMrdna && !overlays.some(o => o.id === activeOverlayId) && <ColorSchemeSelector />}
 
               <label className="field" title="Geometry resolution for spheres, patch cones and spring cylinders">
                 <span className="field-label">Detail</span>

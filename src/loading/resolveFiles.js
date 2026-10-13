@@ -28,6 +28,8 @@ export function classifyDrop(categorized, { sceneIsLoaded }) {
   const bringsSimulation = !!(
     categorized.topology || categorized.trajectory
     || categorized.mglFile || categorized.mglTrajectory
+    || categorized.mrdnaModels?.length || categorized.mrdnaTrajectories?.length
+    || categorized.mrdnaFinals?.length
   );
   const bringsOverlays = !!(
     categorized.clusterFiles?.length || categorized.observableFiles?.length

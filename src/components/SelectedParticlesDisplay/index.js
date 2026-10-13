@@ -3,6 +3,7 @@ import { useParticleStore } from "../../store/particleStore";
 import { useUIStore } from "../../store/uiStore";
 import DraggablePanel from "../DraggablePanel";
 import { CloseIcon } from "../Icons";
+import { describeMrdnaBead } from "../../formats/parsers/mrdna";
 
 function SelectedParticlesDisplay() {
   const positions = useParticleStore(state => state.positions);
@@ -87,7 +88,9 @@ function SelectedParticlesDisplay() {
             <div key={particleIndex} className="particle-info-card">
               <div className="particle-header">
                 <strong>Particle {info.index}</strong>
-                <span className="particle-type">Type {info.typeIndex}</span>
+                <span className="particle-type">
+                  {describeMrdnaBead(topData, info.index) ?? `Type ${info.typeIndex}`}
+                </span>
               </div>
               
               <div className="particle-details">

@@ -7,6 +7,9 @@ import {
   isMGLTrajectoryFile,
   isClusterFile,
   isObservableFile,
+  isMrdnaModel,
+  mrdnaFramesRole,
+  isMrdnaEnergy,
 } from './signatures';
 
 const lines = (text) => text.trim().split('\n');
@@ -231,5 +234,37 @@ t = 1000
 b = 20 20 20
 E = -1.5 -0.5 -1.0
 `))).toBe(false);
+  });
+});
+
+describe('mrdna signatures', () => {
+  const magic = () => {
+    const b = new Uint8Array(16);
+    new DataView(b.buffer).setUint32(0, 0x444E4131, true);
+    new DataView(b.buffer).setUint32(4, 0x4D52, true);
+    return b;
+  };
+  const binary = Float64Array.from([12.5, -3.25, 7.125]);
+  const binaryBytes = new Uint8Array(binary.buffer);
+  const textBytes = new TextEncoder().encode('t = 0\nb = 10 10 10\nE = 0 0 0\n');
+
+  it('recognises a model by its magic number', () => {
+    expect(isMrdnaModel(magic())).toBe(true);
+    expect(isMrdnaModel(textBytes)).toBe(false);
+    expect(isMrdnaModel(new Uint8Array(4))).toBe(false);
+  });
+
+  it('claims a .traj or .final only when its head is binary', () => {
+    expect(mrdnaFramesRole(binaryBytes, 'run.traj')).toBe('mrdna-trajectory');
+    expect(mrdnaFramesRole(binaryBytes, 'RUN.FINAL')).toBe('mrdna-final');
+    // An oxDNA text trajectory named .traj stays an oxDNA trajectory.
+    expect(mrdnaFramesRole(textBytes, 'trajectory.traj')).toBeNull();
+    expect(mrdnaFramesRole(binaryBytes, 'run.dat')).toBeNull();
+    expect(mrdnaFramesRole(new Uint8Array(0), 'run.traj')).toBeNull();
+  });
+
+  it('recognises the energy log by its header', () => {
+    expect(isMrdnaEnergy(['# step E_total E_bond E_angle E_dihedral E_nonbonded', '100 1 2 3 4 5'])).toBe(true);
+    expect(isMrdnaEnergy(['# step 100 N 40 n 2'])).toBe(false);
   });
 });

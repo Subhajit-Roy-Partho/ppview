@@ -23,6 +23,9 @@ const FORMATS = [
   { name: 'raspberry', files: F('raspberry.top', 'raspberry.dat') },
   { name: 'oxdna', files: F('oxdna.top', 'oxdna.dat') },
   { name: 'srs', files: F('srs.psp', 'srs.dat') },
+  // The mrdna bead model: a binary model and binary frames, its own loader and
+  // its own renderer (beads plus bond cylinders).
+  { name: 'mrdna', files: F('mrdna.model', 'mrdna.traj', 'mrdna.energy') },
   { name: 'lorenzo', files: F('lorenzo.top', 'lorenzo.dat', 'patchesA.dat', 'patchesB.dat') },
   { name: 'flavio', files: F('flavio.top', 'flavio.dat', 'particles.txt', 'patches.txt') },
   // The same structure drawn as impostors. Forced on by a query parameter,
@@ -82,13 +85,14 @@ const FORMATS = [
  * | raspberry | spheres + repulsion beads |
  * | oxdna     | four nucleotide meshes |
  * | srs       | spheres + patch cones + spring cylinders |
+ * | mrdna     | bead spheres + bond cylinders (not in `clustering`: see SCENARIO_FORMATS) |
  * | impostor  | the impostor shader |
  *
  * So `flavio` and `mgl` earn their place by *loading* — a parser and a detection
  * path each — not by drawing something new, and they run the scenarios where
  * that is the subject.
  */
-const RENDERERS = ['raspberry', 'oxdna', 'srs', 'lorenzo', 'impostor'];
+const RENDERERS = ['raspberry', 'oxdna', 'srs', 'lorenzo', 'impostor', 'mrdna'];
 // The two fixtures that exist only to exercise a shader. They join the scenarios
 // where the *representation* is the subject — does it compile, does it draw the
 // right shape, does the radius reach it, can it be clicked — and stay out of
@@ -96,9 +100,9 @@ const RENDERERS = ['raspberry', 'oxdna', 'srs', 'lorenzo', 'impostor'];
 // both representations share.
 const NEW_IMPOSTORS = ['impostor-oxdna', 'impostor-raspberry'];
 // Springs are not pickable and srs otherwise picks exactly as lorenzo does.
-const PICKABLE = ['raspberry', 'oxdna', 'lorenzo', 'impostor', ...NEW_IMPOSTORS];
+const PICKABLE = ['raspberry', 'oxdna', 'lorenzo', 'impostor', 'mrdna', ...NEW_IMPOSTORS];
 // MGL frames live in memory; every other format slices them out of a file.
-const LOADERS = ['mgl', 'oxdna'];
+const LOADERS = ['mgl', 'oxdna', 'mrdna'];
 // Scene-wide behaviour — one lighting rig, one control bar, one set of stores.
 // A second fixture would re-measure the same code against different pixels.
 const ANY_ONE = ['lorenzo'];
@@ -611,8 +615,16 @@ const SCENARIOS = {
       const m = h.textContent.match(/[(]([0-9]+)[)]/);
       return m ? Number(m[1]) : 0;
     };
+    // Only for the clean-up after framing, where one enlarged bead can fill the
+    // frame and leave no background to click: use the panel's own clear button.
     const clear = async () => {
-      click(4, rect.height - 4);
+      const p = emptyPoint();
+      if (p) click(p[0], p[1]);
+      else {
+        const button = byLabel('Clear selection');
+        assert(button, 'no empty point to click and no "Clear selection" button either');
+        button.click();
+      }
       await waitFor(() => selectedCount() === 0, 2000);
     };
     // Try candidates in turn: a single point can sit on geometry that is drawn
@@ -653,7 +665,9 @@ const SCENARIOS = {
 
     click(hit[0], hit[1]);
     assert(await waitFor(() => selectedCount() === 1, 2000), 'reselect');
-    click(4, rect.height - 4);
+    const empty = emptyPoint();
+    assert(empty, 'the scene must leave empty space to click, to test that it clears the selection');
+    click(empty[0], empty[1]);
     assert(await waitFor(() => selectedCount() === 0, 2000),
       'a click on empty space must clear the selection');
 
@@ -837,7 +851,11 @@ const SCENARIO_FORMATS = {
   load: null,          // the per-format smoke test: parse, detect, draw
   playback: LOADERS,   // frame stepping and the cache, one per loading path
   detail: [...RENDERERS, ...NEW_IMPOSTORS],  // resolution and radius reach every renderer
-  clustering: RENDERERS,     // and so must cluster appearance
+  // and so must cluster appearance. mrdna is left out: the five-blob assertion
+  // needs a five-blob fixture and its fixture is one real structure. Its cluster
+  // appearance runs through the shared useClusterVisuals, which the selection
+  // scenario's clustered re-pick exercises.
+  clustering: RENDERERS.filter(f => f !== 'mrdna'),
   clusterControls: ANY_ONE,  // the pane and the View control: scene-wide
   selection: PICKABLE,       // picking, per pickable renderer
   appearance: ANY_ONE,       // one lighting rig, one background

@@ -10,6 +10,7 @@ import ParticleLegend from "./components/ParticleLegend";
 import SelectedParticlesDisplay from "./components/SelectedParticlesDisplay";
 import SceneBackgroundToggle from "./components/SceneBackgroundToggle";
 import ClusteringPane from "./components/ClusteringPane";
+import MrdnaPanel from "./components/MrdnaPanel";
 import ControlBar from "./components/ControlBar";
 import LightingControlsModal from "./components/LightingControlsModal";
 import { analyzeFiles, categorizeFiles } from "./formats/detection";
@@ -506,6 +507,7 @@ function App() {
           open: it owns the clustering applied to the scene, which outlives the
           panel. It renders nothing when closed. */}
       {particleCount > 0 && !isLoading && <ClusteringPane />}
+      {particleCount > 0 && !isLoading && <MrdnaPanel />}
 
       {isLoading && (
         <div className="loading-overlay">

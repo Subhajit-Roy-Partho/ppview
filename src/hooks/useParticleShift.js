@@ -1,11 +1,14 @@
 import { useCallback } from 'react';
 import { useParticleStore } from '../store/particleStore';
 import { applyPeriodicWrapping } from '../utils/geometryUtils';
+import { isPeriodic } from '../formats/registry';
 
 /**
  * Nudging every particle along one axis, for looking behind a dense structure.
  *
- * Wrapping only, never re-centring: re-centring would move the structure back
+ * Wraps into the box for periodic formats only; a format with a synthetic box
+ * (mrdna) is just translated, so beads never jump to the far wall. Never
+ * re-centring: re-centring would move the structure back
  * under the camera and undo the shift the person just asked for.
  *
  * Reads positions through `getState()` because Zustand setters take a value, not
@@ -24,7 +27,8 @@ export default function useParticleShift({ invalidateScene }) {
       [axis]: position[axis] + delta,
     }));
 
-    setPositions(applyPeriodicWrapping(shifted, currentBoxSize));
+    const { topData } = useParticleStore.getState();
+    setPositions(isPeriodic(topData) ? applyPeriodicWrapping(shifted, currentBoxSize) : shifted);
     // frameloop is "demand", so a store write alone draws nothing.
     setTimeout(invalidateScene, 0);
   }, [currentBoxSize, invalidateScene, setPositions]);

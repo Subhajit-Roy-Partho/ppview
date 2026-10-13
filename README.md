@@ -5,18 +5,21 @@ A React-based visualization tool for molecular dynamics simulations, specificall
 ## Features
 
 ### Core Visualization
-- Interactive 3D particle visualization using Three.js and React Three Fiber
-- Support for trajectory playback with controls
-- Particle and patch rendering with customizable color schemes
-- Simulation box visualization with optional backdrop planes and coordinate axes
-- Screenshot and GLTF export capabilities
-- Path tracer mode (`@react-three/gpu-pathtracer`) for photorealistic rendering
+- Interactive 3D visualization using Three.js and React Three Fiber
+- Trajectory playback: play/pause, frame stepping, scrubbing and playback speed
+- Customizable color schemes for particle types and patches
+- Simulation box, backdrop planes and coordinate axes, each switchable
+- Lighting presets built for reading data rather than for looks (Depth, Publication, Studio, Relief, Flat), with neutral white lights, faithful tone mapping and ambient occlusion
+- Light or dark scene background
+- Screenshot (`P`) and GLTF export
+- Large systems: spheres switch to GPU impostors above 50,000 drawn spheres (force with `?impostors=1`, disable with `?impostors=0`); frames are parsed by a WebAssembly core and cached for fast replay
 
 ### Particle Types
 - **Standard spherical particles** — rendered as instanced spheres
 - **Raspberry particles** — multi-bead particles with an inner core and outer repulsion beads; only the outer beads are visible and selectable
 - **SRS Springs particles** — spring-bonded particle chains with directional binding patches
 - **oxDNA nucleotides** — full nucleotide representation with backbone beads, nucleoside ellipsoids, and connector cylinders
+- **mrdna bead model** — the coarse-grained DNA beads and bonds written by the mrdna engine, with playback of its Brownian-dynamics relaxation
 
 ### Patch Visualization
 - Patches rendered as outward-pointing cones on the particle surface
@@ -30,16 +33,17 @@ A React-based visualization tool for molecular dynamics simulations, specificall
 - Spring radius proportional to particle radius
 
 ### Clustering Analysis
-- **DBSCAN Clustering**: Automatically cluster particles based on spatial proximity
-- **Interactive Parameters**:
-  - Epsilon distance: Control the maximum distance between particles in a cluster
-  - Minimum points: Set the minimum number of particles required to form a cluster
-- **Real-time Statistics**: View cluster counts, sizes, and noise particles
-- **Size Distribution Histogram**: Shows how many clusters have each particle count
-- **Selective Highlighting**:
-  - Choose which clusters to highlight from the cluster list
-  - Option to show only selected clusters (dims non-selected particles)
-  - Highlighted clusters maintain their original particle colors but are scaled larger
+- **DBSCAN clustering** over periodic (minimum-image) distances, with two parameters:
+  - **Epsilon**: the neighbour distance, capped at half the shortest box side
+  - **Neighbours needed**: the density a particle needs to be a core point (counting itself)
+- **Size band**: keep only clusters between a smallest and a largest size; applies to every cluster source
+- **Cluster files**: load clusters computed elsewhere from a `.json` file (drop it with the simulation, or use *Load clusters from file*)
+- **Cluster/bond observables**: `PLClusterTopology`, `PatchyBonds` and `RaspberryPatchyBonds` output is streamed (multi-GB files work), matched to trajectory frames by step number, and its bonds are drawn patch to patch
+- **Statistics and a size histogram**; clicking a bar selects the clusters of that size
+- **Highlighting**: select clusters to enlarge them in their cluster colour; *Show only selected clusters* hides the rest, optionally leaving faint grey markers
+- **Per-cluster visibility**: an eye control per cluster (or `"visible": false` in a cluster file)
+- **Time view**: clusters over the whole trajectory as bands whose height is their size, showing growth, merges and splits; follow one cluster's particles to see where they went
+- **View control**: choose what colours the scene (particle type, computed clusters or a loaded cluster file) independently of which clusters are being worked with
 
 ### oxDNA Nucleotide Visualization
 When a standard oxDNA topology (`.top`) is loaded, PPView automatically switches to the nucleotide representation matching the oxdna-viewer style:
@@ -48,7 +52,15 @@ When a standard oxDNA topology (`.top`) is loaded, PPView automatically switches
 - **ns↔bb connector** (cylinder r=0.1) — colored by strand
 - **Backbone connector** (tapered cylinder r=0.1→0.02) — follows the sugar-phosphate backbone along the strand, hidden at periodic boundaries
 
-Strand colors cycle through four distinct colors to match standard DNA duplex conventions. Click a backbone bead to select and inspect it; Ctrl/Cmd+click for multi-selection; double-click to zoom the camera to that nucleotide.
+Strand colors cycle through four distinct colors to match standard DNA duplex conventions. Click a backbone bead to select and inspect it; Ctrl/Cmd+click for multi-selection; double-click to frame that nucleotide.
+
+### mrdna Bead Model Visualization
+The bead model of mrdna, a re-implementation of MrDNA (a multi-resolution coarse-grained DNA model used to relax oxDNA designs quickly):
+- **Beads** sized by the nucleotides they stand for: double-stranded (blue), single-stranded (orange), and grey orientation markers on short stalks showing the local twist
+- **Bonds** as cylinders coloured by type: helix, crossover, single strand, junction and orientation
+- **Playback**: frame 0 is the bead mapping of the design, then the Brownian-dynamics frames, with the step and the energy of each frame in the readout
+- **mrdna panel**: a legend with counts that doubles as the controls — switch orientation beads and each bond type on or off, and resize the beads
+- Selection, clustering, the Detail and radius controls and the shift keys work on beads as on any particle; the selection panel shows each bead's kind and nucleotide count
 
 ### File Format Support
 - Standard oxDNA nucleotide topology (`.top` with `strandId base n3 n5` body lines)
@@ -56,23 +68,27 @@ Strand colors cycle through four distinct colors to match standard DNA duplex co
 - Flavio's topology format with `particles.txt` and `patches.txt`
 - Raspberry topology format (`.top` with `iP`/`iR`/`iC` keywords)
 - SRS Springs topology format (`.psp` with `iP`/`iS` keywords)
-- Trajectory files (`.dat`, `.traj`, `.conf`, etc.)
-- MGL format (`.mgl`)
-- Automatic file type detection and prioritization
+- oxDNA trajectory files (`.dat`, `.traj`, `.conf`, etc.)
+- MGL format (`.mgl`), single configurations and trajectories
+- mrdna bead model (`.model` + `.traj`/`.final`, optionally `.energy`)
+- Cluster files (`.json`) and cluster/bond observables (`.txt`/`.dat`), plus `observables.json` and the oxDNA input file for lining observables up with frames
+- Content-based file type detection; files can be dropped all at once
 
 ### User Interface
-- Collapsible control panels
+- Floating control bar: transport and readout, the scrubber, then display options grouped as Scene · Legends · Tools
+- Draggable panels (clustering, mrdna, selection) that stay on screen and remember their position
 - Particle and patch legends
 - Selected particle display
-- Responsive design for different screen sizes
+- Drop more files at any time: cluster files and observables add to the open scene, a new simulation replaces it
+- Embeddable in an iframe with a `postMessage` interface (see [IFRAME_MESSAGING.md](IFRAME_MESSAGING.md))
 
 ## Usage
 
 ### Getting Started
 1. Start the application using `npm start`
-2. Drag and drop your simulation files (topology + trajectory)
-3. Use the controls to navigate through the trajectory
-4. Enable clustering analysis using the chart icon in the controls
+2. Drag and drop your simulation files (topology + trajectory), or press `Ctrl`/`Cmd`+`O`
+3. Use the controls or the keyboard to navigate through the trajectory
+4. Open clustering analysis with the chart icon in the Tools group
 
 ### File Formats
 
@@ -107,21 +123,36 @@ iS <id> <k> <r0> <x> <y> <z>             # spring definition
 ```
 Springs between particles are visualized as cylinders. Patches are shown as cones on the particle surface.
 
+#### mrdna bead model
+Drop the files of one mrdna run together (from `mrdna-relax`, one set per stage, e.g. `design_1_r10.model`, `.traj`, `.energy`):
+- `X.model` — the bead model (binary, recognised by its magic number)
+- `X.traj` — the Brownian-dynamics frames, or `X.final` for the last frame only
+- `X.energy` — optional; gives each frame its step and energy terms
+
+Without a trajectory the model alone is shown. Lengths are converted from Å to oxDNA units, and frames are centred but never wrapped into the box. See [docs/MRDNA_FORMAT_SUPPORT.md](docs/MRDNA_FORMAT_SUPPORT.md) for details.
+
+#### Cluster files and observables
+A cluster `.json` lists clusters as `{ "name", "color", "visible", "particles": [...] }` (or as a bare array; `indices`/`ids` also work). Cluster/bond observables from oxDNA's patchy plugins are recognised by content and lined up with the trajectory by step number, using `print_every` from `observables.json` or the input file when the observable writes no steps.
+
 ### Clustering Analysis
-1. **Enable Clustering**: Click the clustering icon in the control panel
-2. **Adjust Parameters**:
-   - Use the epsilon slider to control cluster detection sensitivity
-   - Adjust minimum points to filter small clusters
-3. **View Statistics**: Check the real-time cluster statistics and size distribution
-4. **Highlight Clusters**:
-   - Select individual clusters from the list
-   - Use "Show only selected clusters" to focus on specific clusters
+1. **Open clustering**: click the chart icon in the Tools group
+2. **Choose the cluster source**: computed (DBSCAN) or any loaded cluster file or observable
+3. **Adjust parameters**: epsilon and neighbours needed (DBSCAN), and the size band (any source)
+4. **Inspect**: statistics, the size histogram and the cluster list
+5. **Highlight**: select clusters, use *Show only selected clusters*, hide individual clusters with their eye control, and use *Clear clustering* to get back to the plain scene
+6. **Over time**: open the time view to see clusters grow, merge and split across the trajectory
 
 ### Keyboard Shortcuts
-- `P`: Take a screenshot
-- `Q/A`: Shift particles along X-axis
-- `W/S`: Shift particles along Y-axis
-- `E/D`: Shift particles along Z-axis
+| Key | Action |
+|-----|--------|
+| `Space` | Frame the selected particles, or play/pause when nothing is selected |
+| `←` / `→` | Step one frame (`Shift` for 10) |
+| `Home` / `End` | First / last frame |
+| `Ctrl`/`Cmd`+`O` | Open files |
+| `P` | Screenshot |
+| `Q/A`, `W/S`, `E/D` | Shift particles along X, Y, Z |
+
+Shortcuts are ignored while typing in a form field. Double-click a particle to frame it.
 
 ## Available Scripts
 
@@ -139,6 +170,14 @@ You may also see any lint errors in the console.
 
 Launches the test runner in the interactive watch mode.\
 See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+
+### `npm run test:visual`
+
+Visual regression tests: headless Chrome drives the real app over every fixture format and compares pixel measurements and assertions against `visual-tests/baseline.json`. Use `-- --only=<format>` to run one format and `-- --update` to re-record the baseline. `npm run fixtures` regenerates the synthetic fixtures; `python3 visual-tests/make-mrdna-fixtures.py` regenerates the mrdna ones from a real mrdna run.
+
+### WebAssembly core
+
+Frame parsing, DBSCAN and observable indexing are compiled from Rust (`wasm/`) to WebAssembly. `npm start` and `npm run build` rebuild it first (`npm run build:wasm`), so a Rust toolchain with the `wasm32-unknown-unknown` target is required.
 
 ### `npm run build`
 

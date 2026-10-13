@@ -5,6 +5,7 @@ import { createFileMap } from '../utils/fileLoader';
 import { buildTrajIndex } from '../utils/trajectoryLoader';
 import { readMGL, readMGLTrajectory, convertMGLToPPViewFormat } from '../utils/mglParser';
 import { pickTopologyFile, pickTrajectoryFile } from './resolveFiles';
+import { loadMrdna } from './loadMrdna';
 import { step, checkpoint, LoadError } from './staleness';
 
 /**
@@ -140,6 +141,14 @@ async function loadTrajectory(categorized, files, signal, scene, exclude, status
 export async function loadSimulation({ files, categorized, signal, scene, status = () => {} }) {
   const inputParams = await readInputFile(categorized, signal, scene, status);
   checkpoint(signal);
+
+  // mrdna is self-contained like MGL: its model is the topology and its frames
+  // are bare doubles, not an oxDNA trajectory.
+  if (categorized.mrdnaModels?.length || categorized.mrdnaTrajectories?.length
+      || categorized.mrdnaFinals?.length) {
+    await loadMrdna(categorized, signal, scene, status);
+    return;
+  }
 
   // MGL is self-contained: no topology, no trajectory file, nothing after this.
   if (categorized.mglFile || categorized.mglTrajectory) {

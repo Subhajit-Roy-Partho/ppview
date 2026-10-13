@@ -15,6 +15,10 @@ export function categorizeFiles(filesWithTypes) {
     clusterFiles: [],
     observableFiles: [],
     observablesConfig: null,
+    mrdnaModels: [],
+    mrdnaTrajectories: [],
+    mrdnaFinals: [],
+    mrdnaEnergies: [],
     unknown: []
   };
 
@@ -58,6 +62,18 @@ export function categorizeFiles(filesWithTypes) {
         categorized.observablesConfig = file;
         break;
 
+      case 'mrdna-model':
+        categorized.mrdnaModels.push(file);
+        break;
+      case 'mrdna-trajectory':
+        categorized.mrdnaTrajectories.push(file);
+        break;
+      case 'mrdna-final':
+        categorized.mrdnaFinals.push(file);
+        break;
+      case 'mrdna-energy':
+        categorized.mrdnaEnergies.push(file);
+        break;
       case 'input':
         categorized.inputFile = file;
         break;

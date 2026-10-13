@@ -279,7 +279,7 @@
     "__assertions": 4
   },
   "raspberry/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "oxdna/load": {
     "loaded": {
@@ -492,7 +492,7 @@
     "__assertions": 4
   },
   "oxdna/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "srs/load": {
     "loaded": {
@@ -956,7 +956,7 @@
     "__assertions": 30
   },
   "lorenzo/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "lorenzo/appearance": {
     "legendsOn": {
@@ -1464,7 +1464,7 @@
     "__assertions": 4
   },
   "impostor/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "impostor-oxdna/load": {
     "loaded": {
@@ -1594,7 +1594,7 @@
     "__assertions": 0
   },
   "impostor-oxdna/selection": {
-    "__assertions": 10
+    "__assertions": 11
   },
   "impostor-raspberry/load": {
     "loaded": {
@@ -1724,6 +1724,172 @@
     "__assertions": 0
   },
   "impostor-raspberry/selection": {
-    "__assertions": 10
+    "__assertions": 11
+  },
+  "mrdna/load": {
+    "loaded": {
+      "coloured": 7374,
+      "neutral": 337,
+      "edges": 7805,
+      "mean": 237.89,
+      "tintR": 85.2,
+      "tintG": 118.8,
+      "tintB": 156.7,
+      "cx": 503,
+      "cy": 502.7
+    },
+    "boxOn": {
+      "coloured": 7374,
+      "neutral": 339,
+      "edges": 8816,
+      "mean": 237.77,
+      "tintR": 85.1,
+      "tintG": 118.6,
+      "tintB": 156.3,
+      "cx": 502.9,
+      "cy": 502.7
+    },
+    "planesOff": {
+      "coloured": 7367,
+      "neutral": 323,
+      "edges": 6899,
+      "mean": 240.11,
+      "tintR": 85.3,
+      "tintG": 118.8,
+      "tintB": 156.6,
+      "cx": 503.3,
+      "cy": 503.3
+    },
+    "axesOff": {
+      "coloured": 7356,
+      "neutral": 339,
+      "edges": 7729,
+      "mean": 237.91,
+      "tintR": 85.3,
+      "tintG": 118.9,
+      "tintB": 156.9,
+      "cx": 502.5,
+      "cy": 501.9
+    },
+    "patchesOn": {
+      "coloured": 7374,
+      "neutral": 339,
+      "edges": 7801,
+      "mean": 237.89,
+      "tintR": 85.2,
+      "tintG": 118.8,
+      "tintB": 156.6,
+      "cx": 503,
+      "cy": 502.7
+    },
+    "restored": {
+      "coloured": 7374,
+      "neutral": 339,
+      "edges": 7801,
+      "mean": 237.89,
+      "tintR": 85.2,
+      "tintG": 118.8,
+      "tintB": 156.6,
+      "cx": 503,
+      "cy": 502.7
+    },
+    "__assertions": 1
+  },
+  "mrdna/playback": {
+    "first": {
+      "coloured": 7373,
+      "neutral": 340,
+      "edges": 7792,
+      "mean": 237.89,
+      "tintR": 85.2,
+      "tintG": 118.8,
+      "tintB": 156.6,
+      "cx": 503,
+      "cy": 502.7
+    },
+    "second": {
+      "coloured": 7312,
+      "neutral": 313,
+      "edges": 7773,
+      "mean": 237.93,
+      "tintR": 85.3,
+      "tintG": 119.2,
+      "tintB": 157.1,
+      "cx": 502.8,
+      "cy": 502.6
+    },
+    "third": {
+      "coloured": 7283,
+      "neutral": 340,
+      "edges": 7714,
+      "mean": 237.93,
+      "tintR": 85.1,
+      "tintG": 119,
+      "tintB": 156.9,
+      "cx": 502.8,
+      "cy": 502.8
+    },
+    "__assertions": 3
+  },
+  "mrdna/detail": {
+    "detailLow": {
+      "coloured": 7280,
+      "neutral": 321,
+      "edges": 7747,
+      "mean": 237.96,
+      "tintR": 85.8,
+      "tintG": 119.6,
+      "tintB": 157.6,
+      "cx": 503.1,
+      "cy": 502.6
+    },
+    "detailUltra": {
+      "coloured": 7429,
+      "neutral": 341,
+      "edges": 7794,
+      "mean": 237.86,
+      "tintR": 85.1,
+      "tintG": 118.7,
+      "tintB": 156.5,
+      "cx": 502.8,
+      "cy": 502.7
+    },
+    "detailMedium": {
+      "coloured": 7373,
+      "neutral": 337,
+      "edges": 7779,
+      "mean": 237.89,
+      "tintR": 85.2,
+      "tintG": 118.8,
+      "tintB": 156.7,
+      "cx": 503,
+      "cy": 502.7
+    },
+    "radiusLarge": {
+      "coloured": 15272,
+      "neutral": 1306,
+      "edges": 8589,
+      "mean": 233.84,
+      "tintR": 80.7,
+      "tintG": 115.3,
+      "tintB": 153.8,
+      "cx": 501.9,
+      "cy": 506.4
+    },
+    "radiusDefault": {
+      "coloured": 7373,
+      "neutral": 337,
+      "edges": 7779,
+      "mean": 237.89,
+      "tintR": 85.2,
+      "tintG": 118.8,
+      "tintB": 156.7,
+      "cx": 503,
+      "cy": 502.7
+    },
+    "__assertions": 0
+  },
+  "mrdna/selection": {
+    "__assertions": 12
   }
 }

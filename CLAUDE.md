@@ -70,7 +70,8 @@ src/
 | Raspberry topology | `.top` | `iP`/`iR`/`iC` keywords in file |
 | SRS Springs topology | `.psp` | 4-integer header + `iS` keyword in file |
 | MGL (self-contained) | `.mgl` | `@` separator, **no** `.Box:` header |
-| Trajectory | `.dat`, `.traj`, `.conf` | content keywords |
+| mrdna bead model | `.model` + `.traj`/`.final` (+ `.energy`) | `.model` by magic number `0x4D52444E4131`; `.traj`/`.final` by name **and** a binary head; `.energy` by its `# step E_total` header |
+| Trajectory | `.dat`, `.traj`, `.conf` | content keywords; a binary `.traj` is mrdna's |
 | MGL Trajectory | `.mgl` with `.Box:` | **any** `.Box:` header, even one |
 | Clusters | `.json` | `clusters` array, or entries with `particles`/`indices`/`ids` |
 | Cluster/bond observable | `.txt`, `.dat` | `n -> (…)` arrows, a `# step n N n` header, or `((i p), (j p))` tuples |
@@ -155,6 +156,34 @@ iS <id> <k> <r0> <x> <y> <z>
 - `App.js` sets `particleRadius` from `srsParticleRadius` after parsing
 - Springs rendered by `Springs.js` as gray cylinders; springs longer than `min(box)/2` are hidden
 - Patches assigned per-particle from body line; `particlesByType` uses first particle's type as representative per strand
+
+### mrdna bead model (`.model` + `.traj`)
+Written by `mrdna-relax` (OpenMM) of the mrdna re-implementation in `../mrdna_project`,
+one set per stage (`NAME_<k>_r<res>.model/.traj/.energy/.final`). The committed
+fixtures came from the earlier Rust engine, which wrote the same format. Lengths are
+Å and are divided by `OX2A = 8.518` on load.
+
+- **Loaded by its own branch** (`loading/loadMrdna.js`), like MGL: the model is
+  binary, so it never passes through `parseTopology`. Frame 0 is the model's
+  own positions (the mapped design, before minimisation); frame k is `.traj`
+  frame k-1, or `.final`. `.energy` gives each frame its step and energies.
+- **Kinds and bond types are recovered, not stored** (`classifyMrdna`):
+  orientation beads carry 0 nucleotides, ds beads are bonded to one, the rest
+  are ss; a ds–ds bond with a twist dihedral (orientation beads at both ends)
+  across it is a helix bond, any other is a crossover. Verified bead for bead
+  against the Python model at 5, 3 and 1 bp/bead; a model without
+  orientation beads is labelled `bead`/`bond` rather than guessed.
+- **Centred, never wrapped.** The model has no box; one is made around frame 0.
+  Wrapping would cut bonds.
+- **Orientation beads are drawn just outside their ds bead, on a short stalk** (the orient bond), in the direction they point: really they sit 1.5 Å off the axis, inside it. The selection panel reports the true position.
+- `.traj` is also an oxDNA trajectory name, so detection reads 64 bytes first
+  and only a binary head makes it mrdna.
+- Fixtures: `python3 visual-tests/make-mrdna-fixtures.py [OUTDIR]` (needs the
+  mrdna package: `pip install -e ../mrdna_project` in the `mrdna-openmm` env). It
+  runs `mrdna-relax` on the tetrahelix and records what the bead model says each
+  bead and bond is, which `mrdna.test.js` checks against. Give an `OUTDIR` to try
+  it without replacing the committed fixtures (regenerating changes the `mrdna`
+  visual baseline).
 
 ### Flavio Companion File Lookup (`parseFlavioTopology`)
 `parseFlavioTopology(content, fileMap, options)` resolves the particles and patches files with a multi-step fallback:
@@ -482,18 +511,20 @@ first is deliberate — a stale render target left bound would otherwise swallow
 
 ## Visual regression tests (`visual-tests/`)
 
-Headless Chrome drives the real app over CDP: 7 fixtures (one per format, each
-laid out as 5 DBSCAN-separable blobs, plus the impostor path as a `?impostors=1`
-override) x 8 scenarios (load, playback, detail/radius, clustering,
-clusterControls, selection, appearance, overlays). It records pixel-bucket counts
+Headless Chrome drives the real app over CDP: 11 fixtures (one per format, the
+impostor path as three `?impostors=1` overrides, and `migrate`) x 9 scenarios
+(load, playback, detail/radius, clustering, clusterControls, selection,
+appearance, overlays, kymograph). Most fixtures are laid out as 5 DBSCAN-separable
+blobs; `mrdna` is the exception, a real structure (a tetrahelix), so it is
+excluded from `clustering`, whose assertions need five blobs. It records pixel-bucket counts
 rather than image hashes, so it tolerates antialiasing jitter but moves decisively
 when geometry appears, vanishes, resizes or loses its colour.
 
 **Not every scenario runs against every fixture** — `SCENARIO_FORMATS` in
 `scenarios.js` says which, and is the suite's coverage argument in one table.
-34 jobs, ~230s; the full cross-product would be 90.
+38 jobs, ~310s; the full cross-product would be 99.
 
-Three of the nine fixtures exist only to exercise a shader: `impostor`,
+Three of the eleven fixtures exist only to exercise a shader: `impostor`,
 `impostor-oxdna` and `impostor-raspberry` load ordinary files with `?impostors=1`,
 because the threshold is 50,000 particles and every fixture here is 40 — without
 them the impostor shaders would have no coverage at all, and a shader that fails
@@ -511,7 +542,7 @@ is that **scene-wide controls reach every renderer**; formats sharing a renderer
 set cannot make it twice. `flavio` draws exactly what `lorenzo` draws and `mgl` a
 subset of it, so they earn their place by *loading* — a parser and a detection
 path each — and run the scenarios where that is the subject. A scenario missing
-from the table aborts the run rather than quietly fanning out to all seven.
+from the table aborts the run rather than quietly fanning out to every fixture.
 
 - `edges` counts horizontal gradient: colour buckets cannot see white geometry
   against a light background, which is exactly how the invisible-bead bug hid.
