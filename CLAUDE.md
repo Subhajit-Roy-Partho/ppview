@@ -158,9 +158,10 @@ iS <id> <k> <r0> <x> <y> <z>
 - Patches assigned per-particle from body line; `particlesByType` uses first particle's type as representative per strand
 
 ### mrdna bead model (`.model` + `.traj`)
-Written by the Rust engine of the mrdna re-implementation in `../mrdna_project`
-(`mrdna_rs run`, via `rsbridge.rs_run`). Lengths are Å and are divided by
-`OX2A = 8.518` on load.
+Written by `mrdna-relax` (OpenMM) of the mrdna re-implementation in `../mrdna_project`,
+one set per stage (`NAME_<k>_r<res>.model/.traj/.energy/.final`). The committed
+fixtures came from the earlier Rust engine, which wrote the same format. Lengths are
+Å and are divided by `OX2A = 8.518` on load.
 
 - **Loaded by its own branch** (`loading/loadMrdna.js`), like MGL: the model is
   binary, so it never passes through `parseTopology`. Frame 0 is the model's
@@ -177,9 +178,12 @@ Written by the Rust engine of the mrdna re-implementation in `../mrdna_project`
 - **Orientation beads are drawn just outside their ds bead, on a short stalk** (the orient bond), in the direction they point: really they sit 1.5 Å off the axis, inside it. The selection panel reports the true position.
 - `.traj` is also an oxDNA trajectory name, so detection reads 64 bytes first
   and only a binary head makes it mrdna.
-- Fixtures: `python3 visual-tests/make-mrdna-fixtures.py` (needs
-  `cargo build --release` in `mrdna_project/rust`). It records what the Python
-  model says each bead and bond is, which `mrdna.test.js` checks against.
+- Fixtures: `python3 visual-tests/make-mrdna-fixtures.py [OUTDIR]` (needs the
+  mrdna package: `pip install -e ../mrdna_project` in the `mrdna-openmm` env). It
+  runs `mrdna-relax` on the tetrahelix and records what the bead model says each
+  bead and bond is, which `mrdna.test.js` checks against. Give an `OUTDIR` to try
+  it without replacing the committed fixtures (regenerating changes the `mrdna`
+  visual baseline).
 
 ### Flavio Companion File Lookup (`parseFlavioTopology`)
 `parseFlavioTopology(content, fileMap, options)` resolves the particles and patches files with a multi-step fallback:

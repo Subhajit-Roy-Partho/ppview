@@ -124,7 +124,7 @@ iS <id> <k> <r0> <x> <y> <z>             # spring definition
 Springs between particles are visualized as cylinders. Patches are shown as cones on the particle surface.
 
 #### mrdna bead model
-Drop the files of one mrdna run together:
+Drop the files of one mrdna run together (from `mrdna-relax`, one set per stage, e.g. `design_1_r10.model`, `.traj`, `.energy`):
 - `X.model` — the bead model (binary, recognised by its magic number)
 - `X.traj` — the Brownian-dynamics frames, or `X.final` for the last frame only
 - `X.energy` — optional; gives each frame its step and energy terms

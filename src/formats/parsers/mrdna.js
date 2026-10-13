@@ -1,8 +1,8 @@
 /**
- * The bead model written by the mrdna Rust engine (`mrdna_rs run`).
+ * The bead model written by mrdna (`mrdna-relax`, in ../mrdna_project).
  *
  * `X.model` is the engine's input: positions, nucleotides per bead and every
- * bonded term, in the layout of `rsbridge.export_model`. It carries no labels —
+ * bonded term, in the layout of `mrdna.modelfile.export_model`. It carries no labels —
  * the engine only needs numbers — so what each bead and bond *is* is recovered
  * from the model's structure (see `classifyMrdna`). `X.traj` and `X.final` are
  * bare f64 frames, N×3 each; `X.energy` is one text row per `.traj` frame.

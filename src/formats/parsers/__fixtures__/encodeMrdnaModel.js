@@ -1,5 +1,5 @@
 /**
- * Writes a `.model` buffer in the layout of mrdna's rsbridge.export_model, for
+ * Writes a `.model` buffer in the layout of mrdna's modelfile.export_model, for
  * tests that need a model the real fixtures do not contain — crossovers, which
  * the tetrahelix has none of, and the malformed files the parser must refuse.
  */
