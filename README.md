@@ -154,6 +154,71 @@ A cluster `.json` lists clusters as `{ "name", "color", "visible", "particles": 
 
 Shortcuts are ignored while typing in a form field. Double-click a particle to frame it.
 
+## PHB formats and the headless renderer
+
+### PHB topology (`.phb`) in the viewer
+
+Drop a `.phb` topology together with its oxDNA `.dat` configuration. Icosahedral
+cores (type -3) are drawn at full size; helix-arm beads (type -4, radius 0.1) are
+drawn at a minimum relative radius of 0.25 so they stay visible. Patches are
+coloured by their interaction colour (the `iP` colour id), not by patch id:
+colours `c` and `-c` interact and get exactly the same colour. Hue is keyed on
+`|c| mod 500` (so 21 and 521 share a hue family) and tone separates them (the
+500s are darker and more saturated). Patch cone size scales with patch strength.
+The Patch Legend lists one swatch per `|c|`. `.psp` files whose comment mentions
+PSP2, or whose input file says `interaction_type = PSP2`, load as PSP2.
+
+### `render_phb.py` - headless high-resolution images
+
+Pure numpy + Pillow (no GPU, display or browser); a 500-molecule system at
+3840x2160 with 2x supersampling takes about 6-8 s.
+
+```bash
+# patch colouring (default), 4K, isometric
+python render_phb.py --top topology.phb --conf final_conf.dat --out img.png
+
+# cluster colouring + legend, white background, whole box drawn
+python render_phb.py --top topology.phb --conf final_conf.dat --out img.png \
+    --cluster-file final_conf.labels.txt --legend --highlight-largest --box
+
+# readable overview of a big system: cores only, down the z axis, mid slab
+python render_phb.py --top t.phb --conf c.dat --out slab.png --view z \
+    --cores-only --slab z 0.4 0.6 --width 7680 --height 4320
+```
+
+Main options (`--help` lists all): `--width/--height` (default 3840x2160),
+`--scale` (supersampling, default 2), `--background white|black|dark|#rrggbb|transparent`,
+`--view iso|x|y|z` / `--azim --elev`, `--zoom`, `--perspective --fov`,
+`--no-arms` (alias `--cores-only`), `--slab AXIS LO HI` (box fractions, strands
+kept whole), `--box`, `--frame N` (trajectory files), `--title`, `--legend`,
+shading `--ao --outline --depth-cue`.
+
+Patch colours use the same mapping as the viewer; `--legend` without a cluster
+file lists the colour pairs.
+
+**Cluster file** (`--cluster-file labels.txt`): one integer per particle in
+topology order; `-1` unassigned, `0` largest cluster, `1` second, ... Each
+cluster gets a distinct categorical hue (arms slightly darker than cores);
+clusters with fewer than `--min-cluster-mols` (default 2) icosahedra and all
+unassigned particles are muted grey (`--fade-unassigned A` fades them towards
+the background, `--hide-unassigned` drops them). `--highlight-largest` keeps the
+largest cluster saturated and mutes the rest; `--fit-cluster N` frames one
+cluster; `--legend` adds a cluster-size legend. Sizes are counted in
+icosahedra ("molecules"). Arms and cores are separate strands in the PHB model,
+so periodic wrapping is per strand (`--wrap strand`) and arm chains are never cut.
+
+### `render_batch.py`
+
+```bash
+python render_batch.py manifest.json --outdir renders/ --legend --highlight-largest --cores-only
+```
+
+`manifest.json` is a list, or an object holding the list under `entries` / `runs`;
+each entry has `topology|top`, `conf|config|conf_snapshot`, optional `labels`, and
+`name` (or `system` + `run`). Extra options are passed to every render; entries
+with labels are cluster-coloured, the others patch-coloured. A failed entry does
+not stop the batch.
+
 ## Available Scripts
 
 In the project directory, you can run:

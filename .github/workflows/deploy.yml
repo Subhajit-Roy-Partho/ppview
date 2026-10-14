@@ -21,6 +21,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      # `npm run build` first rebuilds the WebAssembly core (wasm/), which needs Rust.
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
       - name: Install dependencies
         run: npm ci
 

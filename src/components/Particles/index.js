@@ -114,10 +114,18 @@ function Particles() {
 
   const particleData = useMemo(() => {
     if (!Array.isArray(positions) || positions.length === 0) return [];
+    const fixed = new Map();
+    const fixedColor = (hex) => {
+      if (!fixed.has(hex)) fixed.set(hex, new THREE.Color(hex));
+      return fixed.get(hex);
+    };
     return positions.map((pos) => ({
       typeColor: pos.mglColor
         ? new THREE.Color(pos.mglColor.r, pos.mglColor.g, pos.mglColor.b)
-        : stableTypeColors[pos.typeIndex % Math.max(stableTypeColors.length, 1)],
+        // A format may fix a type's body colour itself (PHB: cores vs arms).
+        : pos.particleType?.baseColor
+          ? fixedColor(pos.particleType.baseColor)
+          : stableTypeColors[pos.typeIndex % Math.max(stableTypeColors.length, 1)],
       baseScale: pos.particleType?.particleScale ?? 1.0,
       hasRepulsionSites: !!(pos.particleType?.repulsionSiteData?.length),
     }));
@@ -217,6 +225,9 @@ function Particles() {
             patchIDs={particleType.patches}
             boxSize={boxSize}
             colorScheme={colorScheme}
+            patchColorOverrides={particleType.patchColors}
+            patchScales={particleType.patchScales}
+            particleScale={particleType.particleScale ?? 1}
           />
         );
       })}

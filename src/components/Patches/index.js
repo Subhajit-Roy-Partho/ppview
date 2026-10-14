@@ -14,7 +14,13 @@ import useClusterVisuals from '../../rendering/useClusterVisuals';
  * geometry is translated so the tip is at the origin, which makes the instance
  * transform a plain "put the tip here, point it inward".
  */
-function Patches({ particles, globalIndices, patchPositions, patchIDs, boxSize, colorScheme = null }) {
+function Patches({
+  particles, globalIndices, patchPositions, patchIDs, boxSize, colorScheme = null,
+  // Optional, for formats whose patches carry their own meaning (PHB): a colour
+  // per patch slot, a size factor per patch slot, and the type's own size
+  // relative to the radius control (so patches sit on a small particle's surface).
+  patchColorOverrides = null, patchScales = null, particleScale = 1,
+}) {
   const particleRadius = useParticleStore(state => state.particleRadius);
   const coneSegments = useUIStore(state => state.sphereSegments);
   const appearanceOf = useClusterVisuals();
@@ -22,8 +28,9 @@ function Patches({ particles, globalIndices, patchPositions, patchIDs, boxSize, 
   // Patch cone dimensions — scaled proportionally to particle radius so patches
   // stay visually consistent across formats with different particle sizes.
   // default particleRadius=0.5 gives the original coneRadius=0.2, coneHeight=0.4.
-  const coneRadius = particleRadius * 0.4;
-  const coneHeight = particleRadius * 0.8;
+  const typeRadius = particleRadius * particleScale;
+  const coneRadius = typeRadius * 0.4;
+  const coneHeight = typeRadius * 0.8;
 
   const geometry = useMemo(() => {
     const cone = new THREE.ConeGeometry(coneRadius, coneHeight, coneSegments);
@@ -63,8 +70,10 @@ function Patches({ particles, globalIndices, patchPositions, patchIDs, boxSize, 
 
   // Patch colours are per patch ID and change only with the colour scheme.
   const patchColors = useMemo(
-    () => patchIDs?.map(id => getColorForPatchID(id, colorScheme)) ?? [],
-    [patchIDs, colorScheme],
+    () => patchColorOverrides
+      ? patchColorOverrides.map(hex => new THREE.Color(hex))
+      : (patchIDs?.map(id => getColorForPatchID(id, colorScheme)) ?? []),
+    [patchIDs, colorScheme, patchColorOverrides],
   );
 
   const scratch = useMemo(() => ({
@@ -86,7 +95,7 @@ function Patches({ particles, globalIndices, patchPositions, patchIDs, boxSize, 
 
     // Shared with Bonds, which starts a bond cylinder at this exact point —
     // the two must not drift, or bonds stop appearing to leave their patches.
-    if (!patchTip(scratch, particle, patchOffset, boxSize, particleRadius * clusterScale)) {
+    if (!patchTip(scratch, particle, patchOffset, boxSize, typeRadius * clusterScale)) {
       return false;   // degenerate patch vector: no direction to face
     }
 
@@ -94,12 +103,12 @@ function Patches({ particles, globalIndices, patchPositions, patchIDs, boxSize, 
     // The cone points +Y by default; aim it inward, at the particle centre.
     scratch.inward.copy(scratch.direction).negate();
     dummy.quaternion.setFromUnitVectors(scratch.up, scratch.inward);
-    dummy.scale.setScalar(clusterScale);
+    dummy.scale.setScalar(clusterScale * (patchScales?.[j] ?? 1));
 
     setColor(entry?.color ?? patchColors[j]);
     return true;
   }, [particles, patchPositions, patchIDs, patchesPerParticle, appearance, patchColors,
-      boxSize, particleRadius, scratch]);
+      boxSize, typeRadius, patchScales, scratch]);
 
   if (!hasValidPatchData) return null;
 

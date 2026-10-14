@@ -10,6 +10,23 @@ function PatchLegend() {
   
   if (!topData || !topData.particleTypes) return null;
   
+  // Formats whose patch colour means something (PHB) supply their own legend.
+  if (topData.patchLegend?.length) {
+    return (
+      <div className="patch-legend">
+        <h3>Patch colours</h3>
+        <ul>
+          {topData.patchLegend.map(({ key, label, hex }) => (
+            <li key={key}>
+              <span className="color-box" style={{ backgroundColor: hex }}></span>
+              <span>{label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   const patchIDs = topData.particleTypes.flatMap((type) => type.patches);
   // Remove duplicates
   const uniquePatchIDs = [...new Set(patchIDs)];

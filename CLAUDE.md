@@ -1645,3 +1645,8 @@ is on, so the 1.3× highlight state never appears on its own — selecting a clu
 unchecked currently has no visual effect. Left as-is deliberately: making selection always
 highlight would add another piece of state with no obvious way to switch off, which is the
 problem "Show all particles" was added to solve.
+
+## PHB rendering notes (fork)
+- `src/formats/parsers/phb.js`: particles are typed by `(type, btype)` (not strand); `particleScale` (min 0.25 relative), `patchColors`, `patchScales`, `baseColor` per type; `topData.patchLegend` feeds `PatchLegend`. `phbPatchPalette` is mirrored by `phb_patch_palette` in `render_phb.py`.
+- `Patches` takes `patchColorOverrides`, `patchScales`, `particleScale`; `Particles` honours `particleType.baseColor`.
+- Headless images: `render_phb.py` (numpy z-buffer rasteriser, no browser) and `render_batch.py`; see README.
