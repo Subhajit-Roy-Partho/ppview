@@ -223,16 +223,15 @@ export function readMGLTrajectory(content) {
     if (line.length > 0) {
       const shapes = parseMGLLine(line);
       if (shapes) {
-        // Capture frame reference before the callback to satisfy no-loop-func
-        const frame = currentFrame;
-        shapes.forEach(particle => {
+        // Handle grouped shapes (separated by G)
+        for (const particle of shapes) {
           // Add frame-specific metadata
-          particle.frameIndex = frame.frameIndex;
-          frame.particles.push(particle);
-          
+          particle.frameIndex = currentFrame.frameIndex;
+          currentFrame.particles.push(particle);
+
           // Update global bounding box
           updateBoundingBox(boundingBox, particle.position);
-        });
+        }
       }
     }
   }

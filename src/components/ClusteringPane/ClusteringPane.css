@@ -1,0 +1,592 @@
+@import '../../styles/tokens.css';
+
+.clustering-pane {
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    width: 340px;
+    max-height: calc(100vh - 40px);
+    background: var(--surface-0);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-panel);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    overflow: hidden;
+}
+
+.clustering-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+    cursor: grab;
+}
+
+.clustering-pane.is-dragging .clustering-header {
+    cursor: grabbing;
+}
+
+.clustering-header h3 {
+    margin: 0;
+    font-size: var(--text-md);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+}
+
+.close-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: none;
+    border-radius: var(--radius-chip);
+    background: transparent;
+    color: var(--ink-mute);
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.close-button:hover {
+    background: var(--surface-hover);
+    color: var(--ink);
+}
+
+/* One scroll region for the whole body. Scrolling each section separately
+   clipped the last row of whichever section ran long. */
+.clustering-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.clustering-header {
+    flex: none;
+}
+
+/* --- Parameters ---------------------------------------------------------- */
+
+.cluster-source {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--line);
+}
+
+.cluster-source-loaded {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--ink-dim);
+}
+
+.cluster-source-note {
+    margin: 0;
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    color: var(--ink-mute);
+}
+
+.cluster-source-note strong {
+    color: var(--ink-dim);
+    font-weight: 600;
+}
+
+.cluster-source .field {
+    justify-content: space-between;
+}
+
+.cluster-source .field select {
+    flex: 1;
+    min-width: 0;
+}
+
+.cluster-source-error,
+.cluster-source-warning {
+    margin: 0;
+    font-size: var(--text-xs);
+    line-height: 1.45;
+}
+
+.cluster-source-error {
+    color: var(--danger);
+}
+
+.cluster-source-warning {
+    color: var(--ink-mute);
+}
+
+.clustering-controls {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--line);
+}
+
+/* DBSCAN parameters cannot change clusters that came from a file. The size
+   band below them can: it filters a finished clustering, whoever produced it. */
+.parameter-group.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.cluster-visibility {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 20px;
+    margin-left: auto;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-chip);
+    background: transparent;
+    color: var(--ink-dim);
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.cluster-visibility:hover {
+    background: var(--surface-hover);
+    color: var(--ink);
+}
+
+/* A hidden cluster reads as switched off rather than merely unhovered. */
+.cluster-visibility.is-hidden {
+    color: var(--ink-mute);
+    opacity: 0.75;
+}
+
+.cluster-swatch {
+    flex: none;
+    width: 22px;
+    height: 16px;
+    padding: 0;
+    margin-right: var(--space-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.cluster-swatch::-webkit-color-swatch-wrapper { padding: 1px; }
+.cluster-swatch::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+.parameter-control+.parameter-control {
+    margin-top: var(--space-4);
+}
+
+.parameter-control label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: var(--text-sm);
+    color: var(--ink-dim);
+}
+
+.parameter-slider {
+    width: 100%;
+}
+
+/* --- Statistics ----------------------------------------------------------
+   A two-column grid of label/value pairs. Values are tabular so the column
+   stays aligned as clustering parameters change. */
+
+.clustering-statistics {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--line);
+}
+
+.clustering-statistics h4,
+.clustering-histogram h4,
+.selection-controls h4 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--ink-dim);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 7px var(--space-3);
+}
+
+.stat-item {
+    display: contents;
+}
+
+.stat-label {
+    font-size: var(--text-sm);
+    color: var(--ink-mute);
+}
+
+.stat-value {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-sm);
+    text-align: right;
+    color: var(--ink);
+}
+
+/* --- Histogram ------------------------------------------------------------ */
+
+.clustering-histogram {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--line);
+}
+
+.histogram-hint {
+    margin: -4px 0 var(--space-3);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    color: var(--ink-mute);
+}
+
+.histogram-container {
+    padding: var(--space-3) var(--space-2) var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+}
+
+.histogram-plot {
+    position: relative;
+    height: 150px;
+}
+
+.histogram-y-axis {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-mute);
+}
+
+/* Scrolls horizontally once there are more distinct cluster sizes than fit.
+   Bars below ~22px stop being clickable targets and their labels stop being
+   readable, so the row is allowed to overflow rather than compress. */
+.histogram-scroll {
+    height: 100%;
+    margin-left: 20px;
+    /* Room for the horizontal scrollbar so it never sits over the labels. */
+    padding-bottom: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+}
+
+.histogram-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 100%;
+    min-width: 100%;
+}
+
+.histogram-bar-container {
+    display: flex;
+    /* Grow to fill when there is room; never shrink past a usable width. */
+    flex: 1 0 22px;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* The bar scales inside this; the labels below keep their own height and can
+   never be squeezed out of the plot. */
+.histogram-bar-track {
+    display: flex;
+    flex: 1;
+    align-items: flex-end;
+    width: 100%;
+    min-height: 0;
+}
+
+/* A bar carries a cluster's colour only where it stands for exactly one of them,
+   since clusters are coloured by identity and not by size — a bar covering five
+   clusters has five colours and no single one. `--bar-color` comes from the
+   component; the neutral fallback is what a bar covering several gets, so the
+   histogram never claims to be a legend it cannot be.
+
+   Blue still means selected, as everywhere else in the app — which is why the
+   colour arrives as a custom property rather than an inline background, since
+   an inline background would outrank the .is-active rule below. */
+.histogram-bar {
+    width: 100%;
+    min-height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: var(--bar-color, rgba(255, 255, 255, 0.22));
+    transition: background var(--dur) var(--ease), filter var(--dur) var(--ease);
+}
+
+.histogram-bar-container:hover .histogram-bar {
+    filter: brightness(1.25);
+}
+
+.histogram-bar-container.is-active .histogram-bar {
+    background: var(--accent);
+}
+
+.histogram-bar-container.is-active:hover .histogram-bar {
+    background: var(--accent-bright);
+}
+
+.histogram-bar-container.is-active .histogram-label-count,
+.histogram-bar-container.is-active .histogram-label-size {
+    color: var(--accent-bright);
+}
+
+.histogram-labels {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+    font-family: var(--font-num);
+    font-size: 9px;
+    line-height: 1.3;
+}
+
+.histogram-label-count {
+    color: var(--ink-dim);
+}
+
+.histogram-label-size {
+    color: var(--ink-mute);
+}
+
+.histogram-scroll::-webkit-scrollbar {
+    height: 7px;
+}
+
+.histogram-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.histogram-scroll::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    background-clip: content-box;
+}
+
+.histogram-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+    background-clip: content-box;
+}
+
+.histogram-axis-labels {
+    padding-top: 6px;
+    text-align: center;
+    font-size: var(--text-xs);
+    color: var(--ink-mute);
+}
+
+.histogram-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 90px;
+    font-size: var(--text-sm);
+    color: var(--ink-mute);
+}
+
+/* --- Selection ------------------------------------------------------------ */
+
+.cluster-selection {
+    padding: var(--space-4);
+}
+
+.selection-buttons {
+    display: flex;
+    flex-wrap: wrap;          /* the reset button takes a row of its own */
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.select-button {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-chip);
+    background: var(--surface-raised);
+    color: var(--ink-dim);
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.select-button:hover {
+    background: var(--surface-hover);
+    border-color: var(--line-strong);
+    color: var(--ink);
+}
+
+/* The way back out of a restricted scene. Accented because it only appears
+   while the scene is actually restricted, and it is the thing you are looking
+   for at that moment — it takes a whole row rather than competing for width
+   with the two selection buttons. */
+.select-button.is-reset {
+    flex-basis: 100%;
+    border-color: var(--accent);
+    color: var(--accent-bright);
+}
+
+.select-button.is-reset:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.highlight-checkbox,
+.cluster-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--ink-dim);
+    cursor: pointer;
+}
+
+.highlight-checkbox {
+    align-items: flex-start;
+}
+
+.highlight-checkbox.indented {
+    margin-top: var(--space-2);
+    padding-left: var(--space-4);
+}
+
+.highlight-checkbox span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.checkbox-hint {
+    font-size: var(--text-xs);
+    line-height: 1.45;
+    color: var(--ink-mute);
+}
+
+.highlight-checkbox input,
+.cluster-checkbox input {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.cluster-list {
+    margin-top: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    overflow: hidden;
+}
+
+.cluster-list-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px var(--space-3);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-sunken);
+    font-size: var(--text-xs);
+    color: var(--ink-mute);
+}
+
+.cluster-items {
+    max-height: 190px;
+    overflow-y: auto;
+}
+
+.cluster-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--ink-dim);
+}
+
+.cluster-item+.cluster-item {
+    border-top: 1px solid var(--line);
+}
+
+.cluster-item:hover {
+    background: var(--surface-raised);
+}
+
+.cluster-items::-webkit-scrollbar {
+    width: 8px;
+}
+
+.cluster-items::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.cluster-items::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    background-clip: content-box;
+}
+
+/* ==========================================================================
+   Two bounds on one track
+   ========================================================================== */
+
+.range-slider {
+    position: relative;
+    height: 22px;
+}
+
+/* The inputs sit on top of each other; only their thumbs take the pointer, so
+   whichever thumb is under it is the one that moves. */
+.range-slider input[type="range"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.range-slider input[type="range"]::-webkit-slider-thumb {
+    pointer-events: auto;
+}
+
+.range-slider input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+}
+
+/* Drawn here rather than by either input, which would each paint their own. */
+.range-slider-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    margin-top: -2px;
+    border-radius: 2px;
+    background: var(--line);
+}
+
+.range-slider-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 2px;
+    background: var(--accent);
+}

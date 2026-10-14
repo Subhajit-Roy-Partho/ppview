@@ -128,3 +128,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# visual regression output
+visual-tests/shots/
+visual-tests/last-run.json
+bench/fixtures/

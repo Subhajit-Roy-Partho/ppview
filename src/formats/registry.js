@@ -1,0 +1,141 @@
+import Particles from '../components/Particles';
+import OxDNANucleotides from '../components/OxDNANucleotides';
+import MrdnaBeads from '../components/MrdnaBeads';
+import { parseRaspberryTopology } from './parsers/raspberry';
+import { parseSRSSpringsTopology } from './parsers/srsSprings';
+import { parsePSP2Topology } from './parsers/psp2';
+import { parsePHBTopology } from './parsers/phb';
+import { parseOxDNANucleotideTopology } from './parsers/oxdnaNucleotide';
+import { parseFlavioTopology } from './parsers/flavio';
+import { parseLorenzoTopology } from './parsers/lorenzo';
+
+/**
+ * Every supported topology format, in one table.
+ *
+ * Adding a format used to mean editing four places: an if-chain in
+ * parseTopFile, a boolean in ParticleScene that picked the renderer, the
+ * categorise switch in fileTypeDetector, and format-specific setup in App.
+ * A format is now one entry here plus its parser.
+ *
+ * Fields:
+ *   id        matches the id produced by fileTypeDetector
+ *   parse     (content, { lines, fileMap, options }) => topology data
+ *   matches   recognises already-parsed topology, for choosing the renderer
+ *   renderer  the component that draws it
+ *   onLoad    optional format-specific store setup after parsing
+ */
+export const FORMATS = [
+  {
+    id: 'oxdna_nucleotide',
+    label: 'oxDNA nucleotide',
+    parse: (content) => parseOxDNANucleotideTopology(content),
+    matches: (topData) => !!topData?.nucleotides?.length,
+    renderer: OxDNANucleotides,
+  },
+  {
+    id: 'raspberry',
+    label: 'Raspberry',
+    parse: (content) => parseRaspberryTopology(content),
+    // Recognised by its own renderer only through the default below; raspberry
+    // particles are drawn by the patchy renderer, as beads.
+    matches: () => false,
+    renderer: Particles,
+  },
+  {
+    id: 'srs_springs',
+    label: 'SRS springs',
+    parse: (content) => parseSRSSpringsTopology(content),
+    matches: () => false,
+    renderer: Particles,
+    onLoad: (topData, { setParticleRadius }) => {
+      // SRS encodes a per-particle radius in the topology itself. This arrives
+      // as the format setter, so it also becomes the baseline that intrinsic
+      // geometry is measured against rather than being applied on top of it.
+      if (topData?.srsParticleRadius !== undefined) setParticleRadius(topData.srsParticleRadius);
+    },
+  },
+  {
+    id: 'psp2',
+    label: 'PSP2',
+    // Same file layout as SRS springs; spring vectors are in the local frame.
+    parse: (content) => parsePSP2Topology(content),
+    matches: () => false,
+    renderer: Particles,
+    onLoad: (topData, { setParticleRadius }) => {
+      if (topData?.srsParticleRadius !== undefined) setParticleRadius(topData.srsParticleRadius);
+    },
+  },
+  {
+    id: 'phb',
+    label: 'PHB',
+    parse: (content) => parsePHBTopology(content),
+    matches: () => false,
+    renderer: Particles,
+    onLoad: (topData, { setParticleRadius }) => {
+      if (topData?.srsParticleRadius !== undefined) setParticleRadius(topData.srsParticleRadius);
+    },
+  },
+  {
+    id: 'flavio',
+    label: 'Flavio',
+    parse: (content, { fileMap, options }) => parseFlavioTopology(content, fileMap, options),
+    matches: () => false,
+    renderer: Particles,
+  },
+  {
+    id: 'lorenzo',
+    label: 'Lorenzo',
+    parse: (content, { lines, fileMap }) => parseLorenzoTopology(lines, fileMap),
+    matches: () => false,
+    renderer: Particles,
+  },
+  {
+    id: 'mrdna',
+    label: 'mrdna beads',
+    // Loaded by its own branch (loading/loadMrdna.js), never through
+    // parseTopology: its topology is a binary model, not a text .top.
+    parse: () => { throw new Error('mrdna models are loaded by loadMrdna'); },
+    matches: (topData) => topData?.format === 'mrdna',
+    renderer: MrdnaBeads,
+    // The box is synthetic (1.5x extent + 4) and frames are never wrapped.
+    periodic: false,
+  },
+];
+
+const BY_ID = new Map(FORMATS.map(f => [f.id, f]));
+
+/** False only for formats whose box is not a real periodic cell. */
+export const isPeriodic = (topData) => {
+  const format = topData ? FORMATS.find(f => f.matches(topData)) : null;
+  return format?.periodic !== false;
+};
+
+export const getFormat = (id) => BY_ID.get(id) || null;
+
+/**
+ * Chooses a renderer from parsed topology. Formats whose `matches` returns
+ * true claim it; everything else is drawn by the patchy-particle renderer,
+ * which is also what MGL and any topology-less scene gets.
+ */
+export function rendererFor(topData) {
+  const format = FORMATS.find(f => f.matches(topData));
+  return format ? format.renderer : Particles;
+}
+
+/**
+ * Parses a topology file. `detectedFormat` comes from fileTypeDetector; when it
+ * is absent we fall back to the original heuristic, which distinguishes Flavio
+ * from Lorenzo by whether the second line contains a decimal point.
+ */
+export async function parseTopology(content, fileMap, detectedFormat = null, options = {}) {
+  const lines = content.trim().split('\n');
+  const ctx = { lines, fileMap, options };
+
+  const format = getFormat(detectedFormat);
+  if (format) return { data: await format.parse(content, ctx), format };
+
+  const fallbackId = lines[1] && !lines[1].includes('.') ? 'flavio' : 'lorenzo';
+  const fallback = getFormat(fallbackId);
+  console.log(`Using fallback topology format detection: ${fallbackId}`);
+  return { data: await fallback.parse(content, ctx), format: fallback };
+}

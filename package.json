@@ -6,34 +6,47 @@
   "dependencies": {
     "@react-three/drei": "^9.113.0",
     "@react-three/fiber": "^8.17.7",
-    "@react-three/gpu-pathtracer": "^0.3.2",
     "@react-three/postprocessing": "^2.16.2",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
     "postprocessing": "^6.36.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-dropzone": "^14.2.3",
     "react-scripts": "5.0.1",
     "three": "^0.168.0",
-    "three-gpu-pathtracer": "^0.0.23",
-    "web-vitals": "^2.1.4",
     "zustand": "^5.0.8"
   },
   "scripts": {
     "start": "react-scripts start",
+    "prebuild": "npm run build:wasm",
+    "prestart": "npm run build:wasm",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build -f"
+    "deploy": "gh-pages -d build -f",
+    "fixtures": "node visual-tests/make-fixtures.js",
+    "test:visual": "node visual-tests/serve-and-run.js",
+    "build:wasm": "cd wasm && cargo build --target wasm32-unknown-unknown --release && cp target/wasm32-unknown-unknown/release/ppview_core.wasm ../public/wasm/"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "CallExpression[callee.name=/^use[A-Za-z]*Store$/][arguments.length=0]",
+          "message": "Subscribe with a selector: useXStore(s => s.field), or useShallow for several. A bare useXStore() re-renders on every write to that store."
+        },
+        {
+          "selector": "CallExpression[callee.name=/^use[A-Za-z]*Store$/] > ArrowFunctionExpression > ObjectExpression",
+          "message": "A selector that builds an object returns a new reference every render. Wrap it in useShallow(...), or take one field at a time."
+        }
+      ]
+    }
   },
   "browserslist": {
     "production": [

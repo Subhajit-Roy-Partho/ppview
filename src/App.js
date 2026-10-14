@@ -1,112 +1,166 @@
-import React, { useEffect, useCallback, useRef } from "react";
-import * as THREE from "three";
+import React, { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import FileDropZone from "./components/FileDropZone";
+import FileDropOverlay from "./components/FileDropOverlay";
+import BusyIndicator from "./components/BusyIndicator";
+import FilePicker from "./components/FilePicker";
+import ImpostorIndicator from "./components/ImpostorIndicator";
 import ParticleScene from "./components/ParticleScene";
 import PatchLegend from "./components/PatchLegend";
 import ParticleLegend from "./components/ParticleLegend";
 import SelectedParticlesDisplay from "./components/SelectedParticlesDisplay";
-import ColorSchemeSelector from "./components/ColorSchemeSelector";
+import SceneBackgroundToggle from "./components/SceneBackgroundToggle";
 import ClusteringPane from "./components/ClusteringPane";
-import PathTracerConfigModal from "./components/PathTracerConfigModal";
+import MrdnaPanel from "./components/MrdnaPanel";
+import ControlBar from "./components/ControlBar";
 import LightingControlsModal from "./components/LightingControlsModal";
-import { analyzeFiles, categorizeFiles, parseInputFile } from "./utils/fileTypeDetector";
-import { readMGL, readMGLTrajectory, convertMGLToPPViewFormat } from "./utils/mglParser";
-import { parseTopFile, getParticleType } from "./utils/topologyParser";
-import { buildTrajIndex, parseConfiguration } from "./utils/trajectoryLoader";
-import { applyPeriodicBoundary, applyPeriodicWrapping, computeRotationMatrix } from "./utils/geometryUtils";
-import { selectFallbackTrajectoryFile, createFileMap } from "./utils/fileLoader";
-import { captureScreenshot, exportSceneAsGLTF } from "./utils/exportUtils";
+import { analyzeFiles, categorizeFiles } from "./formats/detection";
+import { useShallow } from "zustand/react/shallow";
 import { useParticleStore } from "./store/particleStore";
+import { selectParticleCount } from "./store/selectors";
 import { useUIStore } from "./store/uiStore";
 import { useClusteringStore } from "./store/clusteringStore";
+import { readObservableForScene } from "./store/commands";
+import { parseClusterFile } from "./utils/clusterFile";
+import { useOverlayStore } from "./store/overlayStore";
+import { clusterOverlayFromFile, bondObservableOverlay } from "./utils/overlays";
+
+import { loadSimulation } from "./loading/loadSimulation";
+import { loadFrame } from "./loading/loadFrame";
+import { classifyDrop } from "./loading/resolveFiles";
+import { createLoadTokens, runLoad } from "./loading/staleness";
+import usePlayback from "./hooks/usePlayback";
+import useSceneExport from "./hooks/useSceneExport";
+import useParticleShift from "./hooks/useParticleShift";
+import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
+import useIframeBridge from "./hooks/useIframeBridge";
+import useObservableFrame from "./hooks/useObservableFrame";
 import "./styles.css";
-import {
-  PlayIcon, PauseIcon, ResetIcon, SpeedIcon, TagIcon, CircleIcon,
-  LayersIcon, ChartIcon, CameraIcon, DownloadIcon,
-  ChevronUpIcon, ChevronDownIcon, CloseIcon, AxisIcon, SparklesIcon, LightbulbIcon
-} from "./components/Icons";
+import { resetClusterIdentity } from "./utils/clusterIdentity";
+import { loadWasmCore } from "./wasm/wasmCore";
 
-const ToggleBtn = ({ checked, onChange, icon, title }) => (
-  <button
-    className={`toggle-icon-btn ${checked ? 'active' : ''}`}
-    onClick={() => onChange(!checked)}
-    title={title}
-  >
-    {icon}
-  </button>
-);
-
+// Start fetching the compiled core immediately: it is 26 KB and the first
+// frame cannot be read until a file is dropped, so it is always ready in time.
+// Nothing waits on it — every caller falls back to the JavaScript path.
+loadWasmCore();
 
 function App() {
-  // Zustand stores
-  const {
-    positions,
-    currentBoxSize,
-    topData,
-    trajFile,
-    configIndex,
-    currentConfigIndex,
-    currentTime,
-    totalConfigs,
-    setPositions,
-    setCurrentBoxSize,
-    setTopData,
-    setTrajFile,
-    setConfigIndex,
-    setCurrentConfigIndex,
-    setCurrentTime,
-    setCurrentEnergy,
-    setTotalConfigs,
-    setParticleRadius,
-  } = useParticleStore();
+  // Subscribed to values, not to stores. A bare useParticleStore() re-rendered
+  // this component — and the control bar with it — on any write to the store,
+  // including every position array a frame or an axis shift produces.
+  //
+  // particleCount rather than positions: nothing here reads the array, only
+  // whether there is a structure and how big it is.
+  const particleCount = useParticleStore(selectParticleCount);
+  const { topData, trajFile, configIndex, currentConfigIndex, currentTime,
+          totalConfigs, currentEnergy, particleRadius } = useParticleStore(useShallow(state => ({
+    topData: state.topData,
+    trajFile: state.trajFile,
+    configIndex: state.configIndex,
+    currentConfigIndex: state.currentConfigIndex,
+    currentTime: state.currentTime,
+    totalConfigs: state.totalConfigs,
+    currentEnergy: state.currentEnergy,
+    particleRadius: state.particleRadius,
+  })));
 
-  const {
-    showPatchLegend,
-    showParticleLegend,
-    showSimulationBox,
-    showBackdropPlanes,
-    showCoordinateAxis,
-    isControlsVisible,
-    showClusteringPane,
-    filesDropped,
-    isLoading,
-    sceneRef,
-    isIframeMode,
-    isDragDropEnabled,
-    currentColorScheme,
-    isPlaying,
-    playbackSpeed,
-    isSpeedPopupVisible,
-    isPathtracerEnabled,
-    isPathtracerConfigModalOpen,
-    pathtracerConfig,
-    pathtracerSamples,
-    isLightingControlsModalOpen,
-    resetPathtracer,
-    setShowPatchLegend,
-    setShowParticleLegend,
-    setShowSimulationBox,
-    setShowBackdropPlanes,
-    setShowCoordinateAxis,
-    setIsControlsVisible,
-    setShowClusteringPane,
-    setFilesDropped,
-    setIsLoading,
-    setIsIframeMode,
-    setIsDragDropEnabled,
-    setIsPlaying,
-    setPlaybackSpeed,
-    setIsSpeedPopupVisible,
-    setIsPathtracerEnabled,
-    setIsPathtracerConfigModalOpen,
-    setPathtracerConfig,
-    setIsLightingControlsModalOpen,
-  } = useUIStore();
+  // Setters are stable for the life of the store, so one shallow pick of them
+  // never causes a render on its own.
+  const { setPositions, setCurrentBoxSize, setTopData, setTrajFile, setConfigIndex,
+          setConfigTimes, setObservableConfig, setLoadedConfigIndex,
+          setCurrentConfigIndex, setCurrentTime, setCurrentEnergy, setTotalConfigs,
+          setParticleRadius, setFormatParticleRadius,
+          resetParticleRadius } = useParticleStore(useShallow(state => ({
+    setPositions: state.setPositions,
+    setCurrentBoxSize: state.setCurrentBoxSize,
+    setTopData: state.setTopData,
+    setTrajFile: state.setTrajFile,
+    setConfigIndex: state.setConfigIndex,
+    setConfigTimes: state.setConfigTimes,
+    setObservableConfig: state.setObservableConfig,
+    setLoadedConfigIndex: state.setLoadedConfigIndex,
+    setCurrentConfigIndex: state.setCurrentConfigIndex,
+    setCurrentTime: state.setCurrentTime,
+    setCurrentEnergy: state.setCurrentEnergy,
+    setTotalConfigs: state.setTotalConfigs,
+    setParticleRadius: state.setParticleRadius,
+    setFormatParticleRadius: state.setFormatParticleRadius,
+    resetParticleRadius: state.resetParticleRadius,
+  })));
 
-  const highlightedClusters = useClusteringStore(state => state.highlightedClusters);
+  // The store writers the load pipeline needs, bundled once. Store setters are
+  // stable, so this object is too — it can sit in a dependency array without
+  // re-creating the callback that holds it.
+  const sceneWriters = useMemo(() => ({
+    setTopData, setPositions, setCurrentBoxSize, setCurrentTime, setCurrentEnergy,
+    setConfigIndex, setConfigTimes, setTotalConfigs, setTrajFile, setFormatParticleRadius,
+    setObservableConfig, setLoadedConfigIndex,
+  }), [setTopData, setPositions, setCurrentBoxSize, setCurrentTime, setCurrentEnergy,
+       setConfigIndex, setConfigTimes, setTotalConfigs, setTrajFile, setFormatParticleRadius,
+       setObservableConfig, setLoadedConfigIndex]);
+
+  // Same again for the UI store: a value at a time, shallow-compared, so an
+  // unrelated toggle no longer re-renders the whole application.
+  const {
+    showPatchLegend, showParticleLegend, showSimulationBox, showBackdropPlanes, showBonds, bondsCentreToCentre,
+    showCoordinateAxis, showStats, isControlsVisible, showClusteringPane,
+    filesDropped, isLoading, busyMessage, sceneRef, isIframeMode,
+    isDragDropEnabled, isPlaying, playbackSpeed, isSpeedPopupVisible,
+    isLightingControlsModalOpen, setShowPatchLegend, setShowParticleLegend, setShowSimulationBox,
+    setShowBackdropPlanes, setShowBonds, setBondsCentreToCentre, setShowCoordinateAxis, setShowStats, setIsControlsVisible,
+    setShowClusteringPane, setFilesDropped, setIsLoading, setPlaybackSpeed,
+    setIsSpeedPopupVisible, setIsLightingControlsModalOpen, sphereSegments, setSphereSegments,
+  } = useUIStore(useShallow(state => ({
+    showPatchLegend: state.showPatchLegend,
+    showParticleLegend: state.showParticleLegend,
+    showSimulationBox: state.showSimulationBox,
+    showBackdropPlanes: state.showBackdropPlanes,
+    showBonds: state.showBonds,
+    bondsCentreToCentre: state.bondsCentreToCentre,
+    showCoordinateAxis: state.showCoordinateAxis,
+    showStats: state.showStats,
+    isControlsVisible: state.isControlsVisible,
+    showClusteringPane: state.showClusteringPane,
+    filesDropped: state.filesDropped,
+    isLoading: state.isLoading,
+    busyMessage: state.busyMessage,
+    sceneRef: state.sceneRef,
+    isIframeMode: state.isIframeMode,
+    isDragDropEnabled: state.isDragDropEnabled,
+    isPlaying: state.isPlaying,
+    playbackSpeed: state.playbackSpeed,
+    isSpeedPopupVisible: state.isSpeedPopupVisible,
+    isLightingControlsModalOpen: state.isLightingControlsModalOpen,
+    setShowPatchLegend: state.setShowPatchLegend,
+    setShowParticleLegend: state.setShowParticleLegend,
+    setShowSimulationBox: state.setShowSimulationBox,
+    setShowBackdropPlanes: state.setShowBackdropPlanes,
+    setShowBonds: state.setShowBonds,
+    setBondsCentreToCentre: state.setBondsCentreToCentre,
+    setShowCoordinateAxis: state.setShowCoordinateAxis,
+    setShowStats: state.setShowStats,
+    setIsControlsVisible: state.setIsControlsVisible,
+    setShowClusteringPane: state.setShowClusteringPane,
+    setFilesDropped: state.setFilesDropped,
+    setIsLoading: state.setIsLoading,
+    setPlaybackSpeed: state.setPlaybackSpeed,
+    setIsSpeedPopupVisible: state.setIsSpeedPopupVisible,
+    setIsLightingControlsModalOpen: state.setIsLightingControlsModalOpen,
+    sphereSegments: state.sphereSegments,
+    setSphereSegments: state.setSphereSegments,
+  })));
+
 
   // Refs
-  const playbackIntervalRef = useRef(null);
+  // Identifies the most recent load. Anything older that is still awaiting a
+  // file read checks this before writing to the store, so dropping a second
+  // simulation mid-load cannot be clobbered by the first one finishing late.
+  // One source of load tokens for the whole component: beginning a load
+  // invalidates any earlier one, and the pipeline stops at its next await.
+  const loadTokens = useRef(createLoadTokens());
+  // Clusters dropped alongside the simulation. They cannot be applied until the
+  // trajectory has produced positions, because parsing validates every index
+  // against the particle count, so the text waits here until then.
+  const [pendingClusterFiles, setPendingClusterFiles] = useState(null);
   const speedPopupRef = useRef(null);
 
   // Function to show notification (for iframe mode)
@@ -125,369 +179,202 @@ function App() {
     }
   }, [sceneRef]);
 
-  // Function to take a screenshot
-  const takeScreenshot = useCallback(() => {
-    // Pass resolution scale from pathtracer config if pathtracer is enabled
-    const resolutionScale = isPathtracerEnabled ? pathtracerConfig.resolutionScale : 1.0;
-    captureScreenshot(sceneRef, currentConfigIndex, resolutionScale);
-  }, [sceneRef, currentConfigIndex, isPathtracerEnabled, pathtracerConfig.resolutionScale]);
 
+  // Turns cluster files and cluster/bond observables into overlays. Shared by
+  // the two ways they arrive: dropped with the simulation at startup, or
+  // dropped onto a loaded scene.
+  //
+  // The two kinds differ only in how they are read. A `clusters.json` states one
+  // grouping; an observable states one per printed configuration, and is checked
+  // against the trajectory's frame count before it is accepted — see
+  // `parseObservableFile`. After that both are the same shape, and
+  // `useObservableFrame` keeps the observable pointed at the frame on screen.
+  const registerOverlayFiles = useCallback(async (
+    { clusterFiles = [], observableFiles = [] }, particleCount,
+  ) => {
+    const colorScheme = useUIStore.getState().currentColorScheme;
+    const { addOverlay } = useOverlayStore.getState();
+
+    const register = async (file, build) => {
+      try {
+        const warnings = build(await file.text());
+        warnings.forEach(w => console.warn(`${file.name}:`, w));
+      } catch (error) {
+        console.error(`Could not use ${file.name}:`, error.message);
+        notify(`${file.name} ignored: ${error.message}`);
+      }
+    };
+
+    for (const file of clusterFiles) {
+      // eslint-disable-next-line no-await-in-loop
+      await register(file, (text) => {
+        const { clusters, warnings } = parseClusterFile(text, { particleCount });
+        addOverlay(clusterOverlayFromFile({
+          name: file.name.replace(/\.json$/i, ''),
+          clusters,
+          colorScheme,
+        }));
+        return warnings;
+      });
+    }
+
+    for (const file of observableFiles) {
+      try {
+        // Not `file.text()`: these run to gigabytes — the one that prompted the
+        // streaming path is 4.79 GB, nearly nine times V8's maximum string
+        // length — and only the timesteps matching a trajectory frame are ever
+        // parsed. See `loading/readObservable`.
+        // eslint-disable-next-line no-await-in-loop
+        const observable = await readObservableForScene(file);
+        const entry = addOverlay(bondObservableOverlay({
+          name: file.name.replace(/\.[^.]+$/, ''),
+          observable,
+          colorScheme,
+        }));
+        // An observable is both a colouring and a grouping, and its bonds are
+        // drawn for whichever one the pane is working with — so point the pane
+        // at it too, or the file would load and draw nothing.
+        useClusteringStore.getState().setClusterSourceId(entry.id);
+        observable.warnings.forEach(w => console.warn(`${file.name}:`, w));
+      } catch (error) {
+        console.error(`Could not use ${file.name}:`, error.message);
+        notify(`${file.name} ignored: ${error.message}`);
+      } finally {
+        useUIStore.getState().setBusyMessage(null);
+      }
+    }
+  }, [notify]);
+
+  // Everything a previous structure left behind. Selection and cluster
+  // highlights are particle *indices*, so keeping them across a load would
+  // highlight unrelated particles or index past the end; sizes are
+  // per-structure for the same reason.
+  const resetScene = useCallback(() => {
+    // Cluster colours are registered against particle indices, which mean
+    // something different in another structure.
+    resetClusterIdentity();
+    useUIStore.getState().setSelectedParticles([]);
+    useClusteringStore.getState().resetClusters();
+    useOverlayStore.getState().clearOverlays();
+    resetParticleRadius();
+    // Bonds are particle indices from a file that described the old structure.
+    useParticleStore.getState().setBonds(null);
+    setTopData(null);
+    setPositions([]);
+    setTrajFile(null);
+    setConfigIndex([]);
+    setConfigTimes([]);
+    setObservableConfig([]);
+    setCurrentConfigIndex(0);
+    setLoadedConfigIndex(0);
+    setTotalConfigs(0);
+  }, [resetParticleRadius, setTopData, setPositions, setTrajFile, setConfigIndex, setConfigTimes,
+      setObservableConfig, setLoadedConfigIndex,
+      setCurrentConfigIndex, setTotalConfigs]);
 
   const handleFilesReceived = useCallback(async (files) => {
-    if (!files || files.length === 0) {
-      // No files selected or operation cancelled
+    if (!files || files.length === 0) return;
+
+    // Classify before touching anything: a drop of nothing but overlay files
+    // onto a loaded scene adds to it rather than replacing it.
+    const categorized = categorizeFiles(await analyzeFiles(files));
+    const positionCount = useParticleStore.getState().positions.length;
+
+    if (classifyDrop(categorized, { sceneIsLoaded: positionCount > 0 }) === 'overlays-only') {
+      await registerOverlayFiles(categorized, positionCount);
+      useUIStore.getState().setShowClusteringPane(true);
       return;
     }
 
-    // Set filesDropped to true to hide the drop zone immediately
+    const signal = loadTokens.current.begin();
     setFilesDropped(true);
 
-    // Set loading state to true before indexing
+    // Cluster files dropped with the simulation cannot be parsed yet: their
+    // indices are validated against a particle count that does not exist until
+    // the first frame loads. Hold the files until then.
+    const overlayFiles = {
+      clusterFiles: categorized.clusterFiles,
+      observableFiles: categorized.observableFiles,
+    };
+    setPendingClusterFiles(
+      overlayFiles.clusterFiles.length || overlayFiles.observableFiles.length
+        ? overlayFiles : null,
+    );
+
+    // Loading a second simulation must not inherit the first one's state.
+    // Selection and cluster highlights are particle *indices*, so keeping them
+    // would highlight unrelated particles in the new structure — or index past
+    // its end. Sizes are per-structure for the same reason.
+    resetScene();
     setIsLoading(true);
 
-    try {
-      // Analyze file types dynamically based on content
-      console.log("Analyzing file types...");
-      const filesWithTypes = await analyzeFiles(files);
-      const categorizedFiles = categorizeFiles(filesWithTypes);
+    const outcome = await runLoad(() => loadSimulation({
+      files, categorized, signal, scene: sceneWriters,
+      status: useUIStore.getState().setBusyMessage,
+    }));
 
-      console.log("File analysis results:", categorizedFiles);
+    // A superseded load is not a failure: a newer drop owns the scene now, and
+    // clearing the spinner or the drop zone here would fight it. The caption
+    // belongs to whichever load is still running, so it is left alone too.
+    if (outcome.superseded) return;
 
-      // Process input file if present
-      let inputFileParams = {};
-      if (categorizedFiles.inputFile) {
-        try {
-          const inputContent = await categorizedFiles.inputFile.text();
-          inputFileParams = parseInputFile(inputContent);
-          console.log('Parsed input file parameters:', inputFileParams);
-
-          // Check for PATCHY_radius parameter
-          if (inputFileParams.PATCHY_radius !== undefined) {
-            const radius = inputFileParams.PATCHY_radius;
-            console.log(`Found PATCHY_radius in input file: ${radius}`);
-            setParticleRadius(radius);
-          }
-
-          // Upgrade topology format to psp2 when interaction_type says so
-          if (inputFileParams.interaction_type === 'PSP2' &&
-              categorizedFiles.topology?.format === 'srs_springs') {
-            categorizedFiles.topology.format = 'psp2';
-            console.log('Upgraded topology format to psp2 based on input file interaction_type');
-          }
-        } catch (error) {
-          console.warn('Error parsing input file:', error);
-          // Non-fatal error, continue processing other files
-        }
-      }
-
-      // Process MGL files first (they don't need topology)
-      if (categorizedFiles.mglFile || categorizedFiles.mglTrajectory) {
-        try {
-          let mglData, ppviewData;
-
-          if (categorizedFiles.mglFile) {
-            const mglContent = await categorizedFiles.mglFile.text();
-            console.log(`Processing MGL file: ${categorizedFiles.mglFile.name}`);
-
-            mglData = readMGL(mglContent);
-            ppviewData = convertMGLToPPViewFormat(mglData);
-
-            // Set up data for ppview
-            setTopData(ppviewData.topData);
-            setPositions(ppviewData.positions);
-            setCurrentBoxSize(ppviewData.boxSize);
-            setCurrentTime(0);
-            setCurrentEnergy([0]);
-            setConfigIndex([0]); // Single frame
-            setTotalConfigs(1);
-
-            console.log(`Loaded MGL file with ${ppviewData.positions.length} particles`);
-          } else {
-            const mglTrajectoryContent = await categorizedFiles.mglTrajectory.text();
-            console.log(`Processing MGL Trajectory file: ${categorizedFiles.mglTrajectory.name}`);
-
-            mglData = readMGLTrajectory(mglTrajectoryContent);
-            ppviewData = convertMGLToPPViewFormat(mglData);
-
-            // Set up data for ppview
-            setTopData(ppviewData.topData);
-            setPositions(ppviewData.positions);
-            setCurrentBoxSize(ppviewData.boxSize);
-            setCurrentTime(0);
-            setCurrentEnergy([0]);
-
-            // Create trajectory index for frame navigation if multiple frames
-            if (mglData.frameCount > 1) {
-              const fakeIndex = Array.from({ length: mglData.frameCount }, (_, i) => i);
-              setConfigIndex(fakeIndex);
-              setTotalConfigs(mglData.frameCount);
-
-              // Store trajectory data for frame switching
-              setTrajFile({
-                ...categorizedFiles.mglTrajectory,
-                mglTrajectoryData: mglData
-              });
-            } else {
-              setConfigIndex([0]);
-              setTotalConfigs(1);
-            }
-
-            console.log(`Loaded MGL trajectory with ${mglData.frameCount} frames and ${mglData.totalParticles} total particles`);
-          }
-
-          setIsLoading(false);
-          return; // Exit early since MGL is self-contained
-        } catch (error) {
-          console.error('Error processing MGL file:', error);
-          alert('Error processing MGL file. Please check the console for details.');
-          setFilesDropped(false);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Create file map for compatibility with existing code
-      const fileMap = createFileMap(files);
-
-      // Process topology file (only for non-MGL files)
-      if (categorizedFiles.topology) {
-        const topFile = categorizedFiles.topology.file;
-        const topContent = await topFile.text();
-        const parsedTopData = await parseTopFile(topContent, fileMap, categorizedFiles.topology.format, {
-          particleFile: inputFileParams.particle_file,
-          patchFile: inputFileParams.patchy_file,
-        });
-        setTopData(parsedTopData);
-        // SRS Springs format encodes per-particle radius in the topology
-        if (parsedTopData.srsParticleRadius !== undefined) {
-          setParticleRadius(parsedTopData.srsParticleRadius);
-        }
-        console.log(`Loaded ${categorizedFiles.topology.format} topology from ${topFile.name}`);
-      } else {
-        // Fallback: look for .top or .phb extension
-        const topFile = files.find((file) => file.name.endsWith(".top") || file.name.endsWith(".phb"));
-        if (topFile) {
-          const topContent = await topFile.text();
-          const parsedTopData = await parseTopFile(topContent, fileMap, null, {
-            particleFile: inputFileParams.particle_file,
-            patchFile: inputFileParams.patchy_file,
-          });
-          setTopData(parsedTopData);
-          console.log(`Loaded topology from ${topFile.name} (fallback detection)`);
-        } else {
-          alert("No topology file detected! Please ensure you have a valid topology file.");
-          setFilesDropped(false);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Process trajectory file
-      if (categorizedFiles.trajectory) {
-        setTrajFile(categorizedFiles.trajectory);
-        console.log(`Detected trajectory file: ${categorizedFiles.trajectory.name}`);
-      } else {
-        // Fallback: look for common trajectory file patterns with prioritization
-        const fallbackTrajectoryFiles = files.filter(
-          (file) =>
-            file.name.includes("traj") ||
-            file.name.includes("conf") ||
-            file.name.includes("last") ||
-            file.name.includes("init") ||
-            file.name.endsWith(".dat")
-        );
-
-        if (fallbackTrajectoryFiles.length > 0) {
-          // Apply same prioritization logic for fallback files
-          const selectedFile = selectFallbackTrajectoryFile(fallbackTrajectoryFiles);
-          setTrajFile(selectedFile);
-          console.log(`Using trajectory file: ${selectedFile.name} (fallback detection with prioritization)`);
-        } else {
-          alert("No trajectory file detected! Please ensure you have a valid trajectory file.");
-          setFilesDropped(false);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Build the trajectory index
-      const trajectoryFileToUse = categorizedFiles.trajectory || files.find(
-        (file) =>
-          file.name.includes("traj") ||
-          file.name.includes("conf") ||
-          file.name.includes("last") ||
-          file.name.endsWith(".dat")
-      );
-
-      if (trajectoryFileToUse) {
-        const index = await buildTrajIndex(trajectoryFileToUse);
-        setConfigIndex(index);
-        setTotalConfigs(index.length);
-      }
-
-
-      // Report unknown files
-      if (categorizedFiles.unknown.length > 0) {
-        console.warn("Unknown file types detected:", categorizedFiles.unknown.map(f => f.name));
-      }
-
-      // Set loading state to false after indexing
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error processing files:", error);
-      alert("Error processing files. Please check the console for details.");
+    setIsLoading(false);
+    useUIStore.getState().setBusyMessage(null);
+    if (!outcome.ok) {
+      console.error('Could not load the dropped files:', outcome.error ?? outcome.message);
+      // Reset again. A load can fail *after* the topology has been parsed and
+      // written — a drop with a .top and no trajectory does exactly that — and
+      // leaving that behind renders the legends of a structure with no
+      // coordinates on top of the drop zone.
+      resetScene();
+      notify(outcome.message);
       setFilesDropped(false);
-      setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setFilesDropped, setIsLoading, resetScene, registerOverlayFiles,
+      sceneWriters, notify]);
 
-  // Load configuration when topData, trajFile, and configIndex are available
+  // Read the current frame whenever the trajectory or the position in it moves.
+  //
+  // Cancelled on cleanup, for the same reason loads carry a staleness token:
+  // scrubbing quickly, or playing a long trajectory, leaves several frame reads
+  // in flight at once and whichever resolves last would otherwise win — leaving
+  // the scene showing a different frame from the one the controls report. Worse,
+  // a read still running when a new simulation is dropped would paint the old
+  // frame, decorated with the old topology, into the new scene.
   useEffect(() => {
-    if (topData && trajFile && configIndex.length > 0) {
-      loadConfiguration(trajFile, configIndex, currentConfigIndex);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topData, trajFile, configIndex, currentConfigIndex]);
-
-
-  const loadConfiguration = async (file, index, configNumber) => {
-    if (configNumber < 0 || configNumber >= index.length) {
-      alert("Configuration number out of range");
-      return false;
-    }
-
-    // Ensure topData is available
-    if (!topData) {
-      alert("Topology data not available.");
-      return false;
-    }
-
-    // Handle MGL trajectory data
-    if (file.mglTrajectoryData) {
-      const mglData = file.mglTrajectoryData;
-      if (configNumber >= mglData.frameCount) {
-        alert("MGL frame number out of range");
-        return false;
-      }
-
-      const frame = mglData.frames[configNumber];
-      const ppviewData = convertMGLToPPViewFormat({ frames: [frame] });
-
-      setPositions(ppviewData.positions);
-      setCurrentBoxSize(ppviewData.boxSize);
-      setCurrentTime(configNumber); // Use frame index as time
-      setCurrentEnergy([0]); // Default energy for MGL
-      return true;
-    }
-
-    const start = index[configNumber];
-    const end =
-      configNumber + 1 < index.length ? index[configNumber + 1] : file.size;
-    const slice = file.slice(start, end);
-
-    const content = await slice.text();
-    const lines = content.split(/\r?\n/);
-
-    const config = parseConfiguration(lines);
-    if (config) {
-      // Apply periodic boundaries
-      const adjustedPositions = applyPeriodicBoundary(
-        config.positions,
-        config.boxSize,
-      );
-
-      // Associate particle types and compute rotation matrices
-      const positionsWithTypes = adjustedPositions.map((pos, index) => {
-        const { typeIndex, particleType } = getParticleType(
-          index,
-          topData,
-        );
-
-        // Compute rotation matrix from orientation vectors
-        const rotationMatrix = computeRotationMatrix(pos, THREE);
-
-        return {
-          ...pos,
-          typeIndex,
-          particleType,
-          rotationMatrix,
-        };
-      });
-
-      setPositions(positionsWithTypes);
-      setCurrentBoxSize(config.boxSize);
-      setCurrentTime(config.time);
-      setCurrentEnergy(config.energy);
-      return true;
-    } else {
-      alert("Failed to parse configuration");
-      return false;
-    }
-  };
+    if (!topData || !trajFile || configIndex.length === 0) return undefined;
+    let cancelled = false;
+    const guarded = Object.fromEntries(
+      Object.entries(sceneWriters).map(([name, write]) => [
+        name, (...args) => { if (!cancelled) write(...args); },
+      ]),
+    );
+    loadFrame({
+      file: trajFile,
+      index: configIndex,
+      frameNumber: currentConfigIndex,
+      topData,
+      scene: guarded,
+    }).catch(error => {
+      if (cancelled) return;
+      console.error('Could not read that frame:', error);
+      notify(error.message);
+    });
+    return () => { cancelled = true; };
+  }, [topData, trajFile, configIndex, currentConfigIndex, sceneWriters, notify]);
 
 
 
 
 
-  const handleSliderChange = (e) => {
-    const newIndex = parseInt(e.target.value, 10);
-    setCurrentConfigIndex(newIndex);
-    // Reset pathtracer when trajectory changes
-    if (isPathtracerEnabled) {
-      resetPathtracer();
-    }
-    // Trigger re-render when configuration changes
-    setTimeout(invalidateScene, 0);
-  };
+  // Single entry point for every way of changing frame — slider, step buttons,
+  // arrow keys — so the clamp and the redraw can never be forgotten by one of
+  // them.
+  const { goToFrame, stepFrame, togglePlayback, resetTrajectory } = usePlayback({
+    totalConfigs, invalidateScene,
+  });
 
-  // Function to toggle trajectory playback
-  const togglePlayback = useCallback(() => {
-    if (isPlaying) {
-      // Stop playback
-      if (playbackIntervalRef.current) {
-        clearInterval(playbackIntervalRef.current);
-        playbackIntervalRef.current = null;
-      }
-      setIsPlaying(false);
-    } else {
-      // Start playback
-      setIsPlaying(true);
-      playbackIntervalRef.current = setInterval(() => {
-        const currentIndex = useParticleStore.getState().currentConfigIndex;
-        const nextIndex = currentIndex + 1;
-        if (nextIndex >= totalConfigs) {
-          // Reached the end, stop playback
-          if (playbackIntervalRef.current) {
-            clearInterval(playbackIntervalRef.current);
-            playbackIntervalRef.current = null;
-          }
-          setIsPlaying(false);
-        } else {
-          setCurrentConfigIndex(nextIndex);
-        }
-      }, playbackSpeed);
-    }
-  }, [isPlaying, playbackSpeed, totalConfigs, setIsPlaying, setCurrentConfigIndex]);
-
-  // Function to reset trajectory to beginning
-  const resetTrajectory = useCallback(() => {
-    if (playbackIntervalRef.current) {
-      clearInterval(playbackIntervalRef.current);
-      playbackIntervalRef.current = null;
-    }
-    setIsPlaying(false);
-    setCurrentConfigIndex(0);
-  }, [setIsPlaying, setCurrentConfigIndex]);
-
-  // Cleanup playback interval on unmount
-  useEffect(() => {
-    return () => {
-      if (playbackIntervalRef.current) {
-        clearInterval(playbackIntervalRef.current);
-      }
-    };
-  }, []);
+  const handleSliderChange = (e) => goToFrame(parseInt(e.target.value, 10));
 
   // Handle click outside speed popup
   useEffect(() => {
@@ -506,224 +393,53 @@ function App() {
     };
   }, [isSpeedPopupVisible, setIsSpeedPopupVisible]);
 
-  // Function to shift positions along an axis
-  const shiftPositions = useCallback(
-    (axis, delta) => {
-      // Get current positions from store (Zustand doesn't support function updaters)
-      const currentPositions = useParticleStore.getState().positions;
+  const shiftPositions = useParticleShift({ invalidateScene });
+  const { takeScreenshot, exportGLTF, makeOutputFiles } = useSceneExport({ sceneRef });
 
-      // Safeguard: ensure currentPositions is an array
-      if (!Array.isArray(currentPositions)) {
-        console.error('shiftPositions: currentPositions is not an array:', currentPositions);
-        return;
-      }
+  useIframeBridge({ handleFilesReceived, makeOutputFiles, notify });
 
-      const shiftedPositions = currentPositions.map((pos) => {
-        const newPos = { ...pos };
-        newPos[axis] = pos[axis] + delta;
-        return newPos;
-      });
-
-      // Apply only periodic wrapping without re-centering
-      const adjustedPositions = applyPeriodicWrapping(
-        shiftedPositions,
-        currentBoxSize,
-      );
-
-      setPositions(adjustedPositions);
-
-      // Trigger re-render when translation happens
-      setTimeout(invalidateScene, 0);
-    },
-    [currentBoxSize, invalidateScene, setPositions],
-  );
-
-  // Handle pathtracer toggle - open config modal when enabling
-  const handlePathtracerToggle = useCallback(() => {
-    if (!isPathtracerEnabled) {
-      // Opening pathtracer - show config modal
-      setIsPathtracerConfigModalOpen(true);
-    } else {
-      // Closing pathtracer - disable immediately
-      setIsPathtracerEnabled(false);
-    }
-  }, [isPathtracerEnabled, setIsPathtracerEnabled, setIsPathtracerConfigModalOpen]);
-
-  // Handle starting pathtracer with config
-  const handleStartPathtracer = useCallback((config) => {
-    setPathtracerConfig(config);
-    setIsPathtracerEnabled(true);
-  }, [setPathtracerConfig, setIsPathtracerEnabled]);
-
-  // Function to export the scene as GLTF
-  const exportGLTF = useCallback(() => {
-    const particleRadius = useParticleStore.getState().particleRadius;
-    exportSceneAsGLTF({
-      positions,
-      currentBoxSize,
-      currentConfigIndex,
-      showSimulationBox,
-      showBackdropPlanes,
-      currentColorScheme,
-      topData,
-      highlightedClusters,
-      sceneRef,
-      particleRadius
-    });
-  }, [positions, currentBoxSize, currentConfigIndex, showSimulationBox, showBackdropPlanes, currentColorScheme, topData, highlightedClusters, sceneRef]);
-
-  // Function to create output files for download
-  const makeOutputFiles = useCallback(() => {
-    try {
-      // Export GLTF
-      exportGLTF();
-
-      // Take screenshot
-      takeScreenshot();
-
-      console.log('Output files generated successfully');
-    } catch (error) {
-      console.error('Error generating output files:', error);
-    }
-  }, [exportGLTF, takeScreenshot]);
-
-  // Message handler for iframe communication
-  const handleMessage = useCallback((data) => {
-    console.log('PPView received message:', data);
-
-    if (data.message === 'drop') {
-      handleFilesReceived(data.files);
-    }
-    else if (data.message === 'download') {
-      makeOutputFiles();
-    }
-    else if (data.message === 'remove-event') {
-      // Disable drag-drop on the FileDropZone and show notification on drop attempts
-      setIsDragDropEnabled(false);
-      notify("Dragging onto embedded viewer does not allow form completion");
-    }
-    else if (data.message === 'iframe_drop') {
-      let files = data.files;
-      let ext = data.ext;
-      let view_settings = data.view_settings;
-
-      if (files.length !== ext.length) {
-        notify("Make sure you pass all files with extensions");
-        return;
-      }
-
-      // Apply view settings if present
-      if (view_settings) {
-        if ("Box" in view_settings) {
-          setShowSimulationBox(view_settings["Box"]);
-        }
-        if ("BackdropPlanes" in view_settings) {
-          setShowBackdropPlanes(view_settings["BackdropPlanes"]);
-        }
-        if ("CoordinateAxis" in view_settings) {
-          setShowCoordinateAxis(view_settings["CoordinateAxis"]);
-        }
-        if ("PatchLegend" in view_settings) {
-          setShowPatchLegend(view_settings["PatchLegend"]);
-        }
-        if ("ParticleLegend" in view_settings) {
-          setShowParticleLegend(view_settings["ParticleLegend"]);
-        }
-        if ("ClusteringPane" in view_settings) {
-          setShowClusteringPane(view_settings["ClusteringPane"]);
-        }
-        if ("Controls" in view_settings) {
-          setIsControlsVisible(view_settings["Controls"]);
-        }
-      }
-
-      // Set the names and extensions for every passed file
-      for (let i = 0; i < files.length; i++) {
-        files[i].name = `${i}.${ext[i]}`;
-      }
-
-      handleFilesReceived(files);
-      return;
-    }
-    else {
-      console.log(data.message, "is not a recognized message");
-      return;
-    }
-  }, [handleFilesReceived, makeOutputFiles, notify, setIsControlsVisible, setIsDragDropEnabled, setShowBackdropPlanes, setShowClusteringPane, setShowCoordinateAxis, setShowParticleLegend, setShowPatchLegend, setShowSimulationBox]);
-
-  // useEffect to detect iframe mode (run only once on mount)
+  // Clusters dropped with the simulation are registered as soon as the first
+  // frame has produced positions — any earlier and every index would look
+  // out-of-range.
   useEffect(() => {
-    // Check if running in iframe
-    const isInIframe = window.self !== window.top;
-    setIsIframeMode(isInIframe);
+    if (!pendingClusterFiles || particleCount === 0) return;
+    const files = pendingClusterFiles;
+    setPendingClusterFiles(null);
+    registerOverlayFiles(files, particleCount)
+      .then(() => useUIStore.getState().setShowClusteringPane(true));
+  }, [pendingClusterFiles, particleCount, registerOverlayFiles]);
 
-    if (isInIframe) {
-      console.log('PPView: Running in iframe mode');
-      // Hide controls by default in iframe mode
-      setIsControlsVisible(false);
-    }
-  }, [setIsControlsVisible, setIsIframeMode]);
+  /**
+   * Bring the selected particles into view.
+   *
+   * Returns whether it had anything to frame, so the space key can fall through
+   * to play/pause when nothing is selected.
+   */
+  const focusSelection = useCallback(() => {
+    const selected = useUIStore.getState().selectedParticles;
+    if (!selected?.length || !sceneRef?.focusOn) return false;
+    sceneRef.focusOn(selected);
+    return true;
+  }, [sceneRef]);
 
-  // useEffect to set up message listener
-  useEffect(() => {
-    // Set up message listener for iframe communication
-    const messageListener = (event) => {
-      try {
-        handleMessage(event.data);
-      } catch (error) {
-        console.error('Error handling message:', error);
-      }
-    };
+  // Cluster/bond observables hold one entry per frame; this keeps whichever are
+  // loaded pointed at the frame on screen.
+  useObservableFrame();
 
-    window.addEventListener('message', messageListener);
+  useKeyboardShortcuts({
+    togglePlayback, stepFrame, goToFrame, totalConfigs, shiftPositions, takeScreenshot,
+    focusSelection,
+  });
 
-    return () => {
-      window.removeEventListener('message', messageListener);
-    };
-  }, [handleMessage]);
+  // Particle size is a display choice as much as a data one — a radius read
+  // from the input file is often not the one that makes a structure readable.
+  const handleRadiusChange = useCallback((value) => {
+    const radius = Math.min(Math.max(value, 0.05), 5);
+    if (!Number.isFinite(radius)) return;
+    setParticleRadius(radius);
+    setTimeout(invalidateScene, 0);
+  }, [setParticleRadius, invalidateScene]);
 
-  // useEffect to handle key presses
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      try {
-        switch (event.key) {
-          case "q":
-            shiftPositions("x", 1);
-            break;
-          case "a":
-            shiftPositions("x", -1);
-            break;
-          case "w":
-            shiftPositions("y", 1);
-            break;
-          case "s":
-            shiftPositions("y", -1);
-            break;
-          case "e":
-            shiftPositions("z", 1);
-            break;
-          case "d":
-            shiftPositions("z", -1);
-            break;
-          case "p":
-          case "P":
-            takeScreenshot();
-            break;
-          default:
-            break;
-        }
-      } catch (error) {
-        console.warn('Error in key handler:', error);
-        // Don't propagate the error to avoid blocking the application
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      // Cleanup event listener on unmount
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [shiftPositions, takeScreenshot]);
 
   return (
     <div className="App">
@@ -734,173 +450,81 @@ function App() {
           onDisabledDrop={() => notify("Dragging onto embedded viewer does not allow form completion")}
         />
       )}
-      {positions.length > 0 && (
-        <ParticleScene />
-      )}
-      {positions.length > 0 && !isLoading && (
-        <div className={`controls-wrapper ${isControlsVisible ? 'visible' : 'minimized'}`}>
-          {!isControlsVisible && (
-            <button
-              className="show-controls-btn"
-              onClick={() => setIsControlsVisible(true)}
-            >
-              <ChevronUpIcon /> Show Controls
-            </button>
-          )}
 
-          {isControlsVisible && (
-            <div className="controls-panel">
-              <div className="controls-header">
-                <div className="playback-group">
-                  <button className="icon-btn" onClick={resetTrajectory} title="Reset">
-                    <ResetIcon size={20} />
-                  </button>
-                  <button className="icon-btn primary" onClick={togglePlayback} title={isPlaying ? "Pause" : "Play"}>
-                    {isPlaying ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
-                  </button>
+      {particleCount > 0 && <ParticleScene />}
 
-                  <div className="speed-control-wrapper">
-                    <button
-                      className="icon-btn speed-trigger"
-                      onClick={() => setIsSpeedPopupVisible(!isSpeedPopupVisible)}
-                      title="Playback Speed"
-                    >
-                      <SpeedIcon size={18} />
-                      <span className="speed-text">{(1000 / playbackSpeed).toFixed(1)}x</span>
-                    </button>
-                    {isSpeedPopupVisible && (
-                      <div className="speed-popup" ref={speedPopupRef}>
-                        <div className="popup-header">
-                          <span>Playback Speed</span>
-                          <button className="close-btn" onClick={() => setIsSpeedPopupVisible(false)}>
-                            <CloseIcon size={14} />
-                          </button>
-                        </div>
-                        <div className="popup-content">
-                          <input
-                            type="range"
-                            min="50"
-                            max="2000"
-                            step="50"
-                            value={playbackSpeed}
-                            onChange={(e) => setPlaybackSpeed(parseInt(e.target.value))}
-                            className="styled-slider"
-                          />
-                          <div className="speed-value">{(1000 / playbackSpeed).toFixed(1)} fps</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+      {/* Ctrl/Cmd+O, which the initial drop zone's chooser stopped answering the
+          moment it unmounted. */}
+      <FilePicker onFilesReceived={handleFilesReceived} enabled={isDragDropEnabled} />
 
-                <div className="toggles-group">
-                  <ToggleBtn checked={showPatchLegend} onChange={setShowPatchLegend} icon={<TagIcon size={18} />} title="Patch Legend" />
-                  <ToggleBtn checked={showParticleLegend} onChange={setShowParticleLegend} icon={<CircleIcon size={18} />} title="Particle Legend" />
-                  <ToggleBtn checked={showBackdropPlanes} onChange={setShowBackdropPlanes} icon={<LayersIcon size={18} />} title="Backdrop Planes" />
-                  <ToggleBtn checked={showClusteringPane} onChange={setShowClusteringPane} icon={<ChartIcon size={18} />} title="Clustering Pane" />
-                  <ToggleBtn checked={showCoordinateAxis} onChange={setShowCoordinateAxis} icon={<AxisIcon size={18} />} title="Coordinate Axis" />
-                  <button
-                    className="toggle-icon-btn"
-                    onClick={() => setIsLightingControlsModalOpen(true)}
-                    title="Lighting Controls"
-                  >
-                    <LightbulbIcon size={18} />
-                  </button>
-                  <ToggleBtn checked={isPathtracerEnabled} onChange={handlePathtracerToggle} icon={<SparklesIcon size={18} />} title="GPU Pathtracer" />
-                </div>
-
-                <button
-                  className="hide-controls-btn"
-                  onClick={() => setIsControlsVisible(false)}
-                  title="Hide Controls"
-                >
-                  <ChevronDownIcon size={20} />
-                </button>
-              </div>
-
-              <div className="controls-body">
-                <div className="timeline-container">
-                  <input
-                    type="range"
-                    min="0"
-                    max={totalConfigs - 1}
-                    value={currentConfigIndex}
-                    onChange={handleSliderChange}
-                    className="timeline-slider"
-                  />
-                  <div className="timeline-info">
-                    <span className="info-item"><strong>Config:</strong> {currentConfigIndex + 1} / {totalConfigs}</span>
-                    <span className="info-item"><strong>Time:</strong> {typeof currentTime === 'number' ? currentTime.toLocaleString() : currentTime}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="controls-footer">
-                <div className="selectors-wrapper">
-                  <ColorSchemeSelector />
-                </div>
-                <div className="actions-group">
-                  <button className="action-btn" onClick={takeScreenshot} title="Take Screenshot (P)">
-                    <CameraIcon size={16} />
-                    <span>Screenshot</span>
-                  </button>
-                  <button className="action-btn" onClick={exportGLTF} title="Export Scene">
-                    <DownloadIcon size={16} />
-                    <span>Export GLTF</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )
-      }
-      {/* Conditionally render the SelectedParticlesDisplay component */}
-      <SelectedParticlesDisplay />
-
-      {/* Conditionally render the PatchLegend component */}
-      {
-        topData && showPatchLegend && !isLoading && (
-          <PatchLegend />
-        )
-      }
-
-      {/* Conditionally render the ParticleLegend component */}
-      {
-        topData && showParticleLegend && !isLoading && (
-          <ParticleLegend />
-        )
-      }
-      {/* Conditionally render the ClusteringPane component */}
-      {
-        positions.length > 0 && showClusteringPane && !isLoading && (
-          <ClusteringPane />
-        )
-      }
-      {
-        isLoading && (
-          <div className="loading-overlay">
-            <div className="loading-spinner" />
-            <p>Loading trajectory data...</p>
-          </div>
-        )
-      }
-
-      {/* PathTracer Configuration Modal */}
-      <PathTracerConfigModal
-        isOpen={isPathtracerConfigModalOpen}
-        onClose={() => setIsPathtracerConfigModalOpen(false)}
-        onStart={handleStartPathtracer}
-        currentConfig={pathtracerConfig}
-        currentSamples={pathtracerSamples}
+      {/* Once a scene is up the initial drop zone is gone, so dragging more
+          files anywhere over the window reveals a target for them. */}
+      <FileDropOverlay
+        onFilesReceived={handleFilesReceived}
+        enabled={filesDropped && isDragDropEnabled}
       />
 
-      {/* Lighting Controls Modal */}
+      {particleCount > 0 && !isLoading && !isIframeMode && (
+        <div className="scene-corner">
+          {/* Only appears when the scene is drawn as impostors. */}
+          <ImpostorIndicator />
+          <SceneBackgroundToggle />
+        </div>
+      )}
+
+      {particleCount > 0 && !isLoading && (
+        <ControlBar
+          isControlsVisible={isControlsVisible} setIsControlsVisible={setIsControlsVisible}
+          isPlaying={isPlaying} togglePlayback={togglePlayback}
+          resetTrajectory={resetTrajectory} stepFrame={stepFrame}
+          currentConfigIndex={currentConfigIndex} totalConfigs={totalConfigs}
+          currentTime={currentTime} currentEnergy={currentEnergy}
+          playbackSpeed={playbackSpeed} setPlaybackSpeed={setPlaybackSpeed}
+          isSpeedPopupVisible={isSpeedPopupVisible} setIsSpeedPopupVisible={setIsSpeedPopupVisible}
+          speedPopupRef={speedPopupRef} handleSliderChange={handleSliderChange}
+          showSimulationBox={showSimulationBox} setShowSimulationBox={setShowSimulationBox}
+          showCoordinateAxis={showCoordinateAxis} setShowCoordinateAxis={setShowCoordinateAxis}
+          showBackdropPlanes={showBackdropPlanes} setShowBackdropPlanes={setShowBackdropPlanes}
+          showBonds={showBonds} setShowBonds={setShowBonds}
+          bondsCentreToCentre={bondsCentreToCentre} setBondsCentreToCentre={setBondsCentreToCentre}
+          showParticleLegend={showParticleLegend} setShowParticleLegend={setShowParticleLegend}
+          showPatchLegend={showPatchLegend} setShowPatchLegend={setShowPatchLegend}
+          showClusteringPane={showClusteringPane} setShowClusteringPane={setShowClusteringPane}
+          showStats={showStats} setShowStats={setShowStats}
+          isLightingControlsModalOpen={isLightingControlsModalOpen}
+          setIsLightingControlsModalOpen={setIsLightingControlsModalOpen}
+          sphereSegments={sphereSegments} setSphereSegments={setSphereSegments}
+          particleRadius={particleRadius} handleRadiusChange={handleRadiusChange}
+          takeScreenshot={takeScreenshot} exportGLTF={exportGLTF}
+        />
+      )}
+
+      <SelectedParticlesDisplay />
+
+      {topData && showPatchLegend && !isLoading && <PatchLegend />}
+      {topData && showParticleLegend && !isLoading && <ParticleLegend />}
+      {/* Mounted whenever there is a structure, not only while the panel is
+          open: it owns the clustering applied to the scene, which outlives the
+          panel. It renders nothing when closed. */}
+      {particleCount > 0 && !isLoading && <ClusteringPane />}
+      {particleCount > 0 && !isLoading && <MrdnaPanel />}
+
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-spinner" />
+          {/* Whatever stage the load is at, rather than one fixed line that was
+              wrong for most of the time it was showing. */}
+          <p>{busyMessage ?? 'Reading the simulation'}</p>
+        </div>
+      )}
+
+      <BusyIndicator />
+
       <LightingControlsModal
         isOpen={isLightingControlsModalOpen}
         onClose={() => setIsLightingControlsModalOpen(false)}
       />
-    </div >
+    </div>
   );
 }
 
