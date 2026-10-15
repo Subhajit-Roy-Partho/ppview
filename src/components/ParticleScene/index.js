@@ -264,7 +264,7 @@ const SceneContent = React.memo(function SceneContent({
     if (onSceneReady && scene && camera && gl) {
       // focusOn travels with the rest: the keyboard handler lives in App and
       // this is the channel App already has into the scene.
-      onSceneReady({ scene, camera, gl, invalidate, focusOn });
+      onSceneReady({ scene, camera, gl, invalidate, focusOn, controls: controlsRef.current });
     }
   }, [onSceneReady, scene, camera, gl, invalidate, focusOn]);
 

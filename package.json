@@ -27,7 +27,8 @@
     "deploy": "gh-pages -d build -f",
     "fixtures": "node visual-tests/make-fixtures.js",
     "test:visual": "node visual-tests/serve-and-run.js",
-    "build:wasm": "cd wasm && cargo build --target wasm32-unknown-unknown --release && cp target/wasm32-unknown-unknown/release/ppview_core.wasm ../public/wasm/"
+    "build:wasm": "cd wasm && cargo build --target wasm32-unknown-unknown --release && cp target/wasm32-unknown-unknown/release/ppview_core.wasm ../public/wasm/",
+    "generate-image": "node cli/generate-image.js"
   },
   "eslintConfig": {
     "extends": [
@@ -61,6 +62,7 @@
     ]
   },
   "devDependencies": {
-    "gh-pages": "^6.1.1"
+    "gh-pages": "^6.1.1",
+    "puppeteer": "^25.7.0"
   }
 }

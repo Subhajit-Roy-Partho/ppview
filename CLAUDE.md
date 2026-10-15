@@ -20,6 +20,7 @@ npm run fixtures                 # Regenerate visual-test fixtures
 npm run test:visual              # Visual regression vs baseline
 npm run test:visual -- --update  # Re-record the baseline
 npm run test:visual -- --only=oxdna
+npm run generate-image            # CLI: render a topology/trajectory to a PNG headlessly (see below)
 ```
 
 ## Architecture
@@ -1232,6 +1233,30 @@ PPView detects iframe mode (`window.self !== window.top`) and hides controls. Su
 - `download` — trigger screenshot + GLTF export
 - `remove-event` — disable drag-drop
 - `iframe_drop` — load files with `view_settings` object (`Box`, `Controls`, `PatchLegend`, `ParticleLegend`, `ClusteringPane`, etc.)
+
+## CLI Image Generation
+
+`cli/generate-image.js` renders a topology/trajectory (or self-contained `.mgl`) to a PNG without a browser UI, using a real instance of the app driven by Puppeteer.
+
+```bash
+npm run generate-image -- --top system.top --traj last_conf.dat -o out.png
+node cli/generate-image.js --mgl system.mgl -o out.png --box --color-scheme viridis
+node cli/generate-image.js --help   # full flag list
+```
+
+Key flags: `--width/--height` (resolution), `--frame` (config index), `--camera-position x,y,z` / `--camera-target x,y,z` / `--fov` / `--zoom`, `--background` (CSS color or `transparent`), `--box` / `--backdrop` / `--no-axis`, `--color-scheme`, `--port` / `--url` (reuse a running dev server instead of spawning one), `--headed` (debug with a visible browser).
+
+If `--camera-position`/`--camera-target` are omitted, the CLI auto-frames the loaded structure from its bounding box (the app itself has no auto-fit — its default camera is a fixed `[100, 0, 0]`, which only looks right for a system of roughly that scale).
+
+### `window.__PPVIEW_CLI__` (src/App.js)
+The CLI drives the page through a small imperative API attached to `window` on mount, separate from the iframe `postMessage` interface (Puppeteer controls the top-level page directly via `page.evaluate`, so it doesn't need async message round-trips):
+- `loadFiles(File[])` — same path as drag-drop / the iframe `drop` message
+- `isReady()` — true once loading finished, positions exist, **and** the Three.js scene/camera/renderer have mounted (`ParticleScene` only mounts once `positions.length > 0`, so this lags `positions` by a render pass — poll this, not just the store)
+- `getState()` — `{ isLoading, totalConfigs, currentConfigIndex, particleCount, boxSize, particleRadius, bounds }`; `bounds` (`{min, max, center}`) is the world-space particle bounding box, used for camera auto-fit
+- `setConfigIndex(i)`, `setViewSettings({...})` (same keys as `iframe_drop`'s `view_settings`, plus `ColorScheme`), `setCamera({position, target, fov, zoom})`
+- `captureImage(options)` → `Promise<dataURL>` — renders and resolves with a PNG data URL (see `captureImageDataURL` in `utils/exportUtils.js`); does **not** trigger a browser download, unlike the existing `captureScreenshot`
+
+The CLI script also listens for `page.on('dialog', ...)` and auto-dismisses it — several error paths in `App.js` (e.g. "No topology file detected!") call plain `alert()`, which would otherwise hang headless Chrome indefinitely waiting for manual dismissal.
 
 ## Adding Features
 
