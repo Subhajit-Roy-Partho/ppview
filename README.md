@@ -191,7 +191,9 @@ Main options (`--help` lists all): `--width/--height` (default 3840x2160),
 `--view iso|x|y|z` / `--azim --elev`, `--zoom`, `--perspective --fov`,
 `--no-arms` (alias `--cores-only`), `--slab AXIS LO HI` (box fractions, strands
 kept whole), `--box`, `--frame N` (trajectory files), `--title`, `--legend`,
-shading `--ao --outline --depth-cue`.
+shading `--ao --outline --depth-cue`, `--model ball|ballstick` (ball-and-stick draws
+each helix arm as joint balls joined by sticks; `--stick-radius`, `--joint-radius`).
+Clean figure sets of many runs: see `clear/`.
 
 Patch colours use the same mapping as the viewer; `--legend` without a cluster
 file lists the colour pairs.

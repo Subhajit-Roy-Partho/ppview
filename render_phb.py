@@ -487,7 +487,7 @@ def render_scene(args, pos, a1, a3, ptype, btype, radius, body_rgb, topo, patch_
         if fade_mask is not None and fade_mask[i] and fade < 1.0:
             lit = lit * fade + bg * (1 - fade)
         zwin[yy, xx] = depth[yy, xx]
-        ibuf[y0:y1, x0:x1][yy, xx] = i
+        ibuf[y0:y1, x0:x1][yy, xx] = (i if args._gid is None else args._gid[i])
         cbuf[y0:y1, x0:x1][yy, xx] = np.clip(lit * 255.0 + 0.5, 0, 255).astype(np.uint8)
         if (ii + 1) % 4000 == 0:
             log(f"    {ii + 1}/{len(order)} ({time.time() - t0:.1f}s)")
@@ -688,6 +688,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="periodic wrapping: whole strands (default; arm chains are never cut), per particle, or raw")
     s.add_argument("--min-radius-frac", type=float, default=MIN_RELATIVE_RADIUS,
                    help="smallest drawn radius as a fraction of the largest (keeps 0.1 beads visible; default 0.25)")
+    s.add_argument("--model", choices=["ball", "ballstick"], default="ball",
+                   help="ball (default, ppview model): cores and arm beads as spheres; "
+                        "ballstick: cores as balls, each helix arm drawn as small joint balls joined by sticks")
+    s.add_argument("--stick-radius", type=float, default=0.06, help="ballstick: stick radius (default 0.06)")
+    s.add_argument("--joint-radius", type=float, default=0.13, help="ballstick: arm-bead (joint) radius (default 0.13)")
     s.add_argument("--no-patches", dest="patches", action="store_false", default=None,
                    help="do not draw patches (default: drawn unless --cluster-file is given)")
     s.add_argument("--patches", dest="patches", action="store_true", default=None,
@@ -716,6 +721,42 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--depth-cue", type=float, default=0.18, help="fade towards the background with depth (0..1)")
     q.add_argument("--quiet", "-q", action="store_true")
     return p
+
+
+def add_sticks(args, topo, pos, a1, a3, body_rgb, fade_mask):
+    """Ball-and-stick model: arm beads become small joint balls and consecutive
+    beads of an arm are joined by a stick, drawn as a dense row of small spheres
+    (so the z-buffer rasteriser needs no cylinder primitive). Stick spheres are
+    appended after the real particles with ptype -5 and share their arm bead's
+    outline id so no seams appear along a stick."""
+    n = topo.n
+    arm = topo.ptype == -4
+    idx = np.nonzero(arm)[0]
+    a, b = idx[:-1], idx[1:]
+    keep = topo.strand[a] == topo.strand[b]
+    a, b = a[keep], b[keep]
+    step = max(args.stick_radius * 0.4, 1e-3)
+    seg = pos[b] - pos[a]
+    length = np.linalg.norm(seg, axis=1)
+    cnt = np.maximum(np.ceil(length / step).astype(int) - 1, 0)
+    owner = np.repeat(a, cnt)
+    t = np.concatenate([(np.arange(1, c + 1) / (c + 1.0)) for c in cnt]) if cnt.sum() else np.zeros(0)
+    sp = pos[owner] + seg[np.repeat(np.arange(len(a)), cnt)] * t[:, None]
+    m = len(sp)
+    radius = topo.radius.copy()
+    radius[arm] = args.joint_radius
+    pos2 = np.concatenate([pos, sp])
+    zeros = np.zeros((m, 3))
+    ptype2 = np.concatenate([topo.ptype, np.full(m, -5)])
+    btype2 = np.concatenate([topo.btype, np.full(m, -1)])
+    radius2 = np.concatenate([radius, np.full(m, args.stick_radius)])
+    rgb2 = np.concatenate([body_rgb, body_rgb[owner]])
+    vis = args.visible
+    args.visible = np.concatenate([vis, vis[owner]])
+    args._fit_mask = np.concatenate([args._fit_mask, np.zeros(m, bool)])
+    args._gid = np.concatenate([np.arange(n), owner])
+    fm = None if fade_mask is None else np.concatenate([fade_mask, fade_mask[owner]])
+    return pos2, np.concatenate([a1, zeros]), np.concatenate([a3, zeros]), ptype2, btype2, radius2, rgb2, fm
 
 
 def render(args, log=print) -> str:
@@ -788,7 +829,14 @@ def render(args, log=print) -> str:
     else:
         args._fit_mask = visible
 
-    img, cover, _info = render_scene(args, pos_w, a1, a3, topo.ptype, topo.btype, topo.radius,
+    ptype_r, btype_r, radius_r = topo.ptype, topo.btype, topo.radius
+    args._gid = None
+    if args.model == "ballstick":
+        pos_w, a1, a3, ptype_r, btype_r, radius_r, body_rgb, fade_mask = add_sticks(
+            args, topo, pos_w, a1, a3, body_rgb, fade_mask)
+        args.min_radius_frac = 0.0          # radii are explicit in ballstick mode
+
+    img, cover, _info = render_scene(args, pos_w, a1, a3, ptype_r, btype_r, radius_r,
                                      body_rgb, topo, cmap, box, fade_mask,
                                      (lambda *a: None) if args.quiet else log)
 
