@@ -1,0 +1,26 @@
+from oxDNA_analysis_tools.UTILS.RyeReader import describe, get_confs, inbox, write_conf
+from oxDNA_analysis_tools.UTILS.oxview import oxdna_conf
+import numpy as np
+import matplotlib.pyplot as plt
+#from tqdm import tqdm
+ti,di = describe("ico6helix20T.top","trajectory.dat");
+helix = [15886,15887,15888,15889,15890,15968,15969,15970,15971,15972,15973,15974,15975,15976,16042,16043,16044,16045,16046,16047,16048,16106,16107,16108,16109,16110,16111,16112,16171,16172,16173,16174,16175,16176,16177,16178,16277,16278,16279,16280,16281,16282,16289,16290,16291,16292,16293,16294,16295,16350,16351,16360,16361,16362,16363,16364,16365,16523,16524,16525,16526,16527,16528,16529,16530,16531,16532,16533,16534,16535,16536,16537,16542,16543,16544,16832,16833,16834,16835,16836,16837,16838,16839];
+edge = [14913,14914,14915,14916,14917,14918,14919,14920,14921,14922,14923,14924,14925,14926,14927,14928,14929,14930,14931,14932,14933,14934,14935,488,489,490,491,492,493,494,495,496,497,498,499,500,501,502,503,504,505,506,507,508,509,510,511,512,513,514,515,516,517,518,519,520,521,522,523,524,525,526,527,528,529,530,531,532,533,534,535,536,537,538,539,540,541,542,8610,8611,8612,8613,8614,8615,8616,8617,8618,8619,8620,8621,8622,8623,8624,8625,8626,8627,8628,8629,8630,8631,8632,8633,15800,15801,15802,15803,15804,15805,15806,15807,15808,15809,15810,15811,15812,15813,15814,15815,15816,15817,15818,15819,15820,15821,15822,15823,15824,15825,15826,15827,15828,15829,15830,15831];
+
+
+def getAngles(ti,di,helix,edge):
+    angles = np.zeros((di.nconfs-1),dtype=float);
+    for i in range(di.nconfs-1):
+        conf = get_confs(ti,di,i,i+1)[0];
+        com = np.mean(conf.positions,axis=0);
+        helix_com = np.mean(conf.positions[helix],axis=0);
+        edge_com = np.mean(conf.positions[edge],axis=0);
+        angles[i] = np.rad2deg(np.arccos(np.dot(helix_com-edge_com,com-edge_com)/(np.linalg.norm(helix_com-edge_com)*np.linalg.norm(com-edge_com))));
+    return angles;
+
+angles = getAngles(ti,di,helix,edge);
+with open("angles.npy","wb") as f:
+    np.save(f,angles);
+
+# plt.hist(angles,density=True);
+# plt.savefig("Plot.png",dpi="100");
