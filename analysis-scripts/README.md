@@ -155,3 +155,7 @@ at all. Scripts (all idempotent, repo-convention outputs written in place):
   rest (868 mass-rendered → 84 heroes). Helix/DNA systems (oxDNA `.top`, unreadable
   by render_phb/cluster_labels) use lowest-final-energy as the hero proxy, rendered
   via `cli/generate-image.js` against a local dev server.
+- `render_ghost.py` / `run_ghost.sh` — clear2-style ghost compositing for the drive
+  heroes (`render_phb.render_ghosted()`: tetrahedron-member molecules opaque, rest at
+  12% opacity, ballstick, 1920x1080, text-free) → `final_ghost.png` next to each
+  hero `final.png` (84/84; `clear2/render_clear2.py` itself needs `/scratch` data).
