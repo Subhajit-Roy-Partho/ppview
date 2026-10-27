@@ -21,6 +21,7 @@ columns (`u 1:4`) across temperature outputs into a PNG:
 | `PHBcg__Performance__float.gp`, `...__mixed.gp` | `PHBcg/Performance/float.gp`, `mixed.gp` | `FloatPerformance.png` / mixed perf plots |
 | `Backup__*__plot.gp` (11 files) | `Backup/...` mirrors | corresponding `Backup/.../plot.png` |
 | `*__plot.sh` (4 files) | `PHB2/sq0.1/plot.sh`, `Backup/PHB2/a0.1/plot.sh`, `Backup/PHB2/crystal/s1-05/plot.sh`, `Backup/PHB2/crystal/s1/plot.sh` | generate `plot.gp` for a temperature sweep **and** run `terminal autoconvert -i <topology> -d last_conf.dat -o last.mgl` per output dir, then `gnuplot plot.gp` |
+| `*__script.sh` (8 files, added 2026-10-27) | `50helix/10/script.sh`, `560helix/10/script.sh`, `PHB/Seeded/HandLength/7longHand/script.sh`, `Backup/PHB4/square/a03/script.sh`, `PHB5/lowa/a03/script.sh`, `PHB5/square/a03/script.sh`, `PHB3/square/a1/script.sh`, `Helix/Single/script.sh` | simulation-run scripts whose tail does the same inline-gnuplot `plot.png` + `terminal autoconvert ... last.mgl` pattern; these are the master templates behind the `plot.png` files in `PHB5/*`, `PHB3/square/a1`, `Seeded/*`, `SmallSeed/*`, `PHB/Seeded/*`, `PHB/SmallSeed/*`, `50helix/*`, `560helix/*`, `Helix/*` (top-level `script.sh` is a symlink to `Backup/PHB4/square/a03/script.sh`) |
 
 Run: `gnuplot <file>.gp` (needs the `output/<T>/energy.ign` tree, not archived).
 
@@ -62,8 +63,24 @@ Dependencies (not archived): `oxDNA_analysis_tools`, `numpy`, `matplotlib`,
   `~/Documents/Github/oxDNAcpp/main/src/build/terminal phbcluster -i <topology.phb> -d <final_conf.dat> -o <out>.mgl --patchRadius 0.3`
   (renders in ppview or `~/Documents/Software/cogli2/build/bin/cogli2`).
 - `mgl_files__archive__README.md` — 11 archive-crystal table, same command.
-- The `plot.sh` files in `gnuplot/` also show the per-frame variant:
+- The `plot.sh` / `*__script.sh` files in `gnuplot/` also show the per-frame variant:
   `terminal autoconvert -i <topology> -d last_conf.dat -o last.mgl`.
+  The same 2-line `rm -rf last.mgl && terminal autoconvert ... &` snippet recurs in
+  `Backup/PHB/s2helix/resume.sh`, `Backup/PHB/sh0ab100/resume.sh`,
+  `Backup/PHB/sh0alpha0.05/resume.sh`, `PHBdegub/small/resume.sh`,
+  `PHBdegub/small0.01/resume.sh` (simulation-resume scripts; pattern already
+  archived, not copied one by one).
+- `clusters__run_analysis.sh` (added 2026-10-27) — batch driver that walks every
+  `*.phb` under `/mnt/Drive/PHB` (excluding `Backup/`, `PHB/PHB/`) and runs
+  `analyze_crystal.py --format phb --cutoff 0.20 --mgl --mgl-out ... --json-out ...`
+  to produce one `<label>.mgl` + `<label>.json` per simulation in
+  `/mnt/Drive/PHB/clusters/` (the `.mgl`/`.json` pairs rendered by ppview).
+- `oxDNAcpp__pyrochlore__analyze_crystal.py` (added 2026-10-27) — the crystal
+  quality analyzer itself (distance/orientation binding detection, modulo-500
+  colour rule, `--cutoff 0.20` for PHB). Pinned copy from
+  `git@github.com:Subhajit-Roy-Partho/oxDNAcpp.git` at commit `56fc569`
+  (`pyrochlore/analyze_crystal.py`); canonical source lives in that repo, this
+  copy freezes the version that generated the current `clusters/` outputs.
 
 `.mgl` binaries themselves live in `/mnt/Drive/PHB/mgl_files/` (14 files),
 `/mnt/Drive/PHB/mgl_files/archive/` (11 files), `/mnt/Drive/PHB/clusters/`
@@ -86,3 +103,24 @@ node cli/generate-image.js --top <topology.top> --traj <trajectory.dat> \
 
 (see `cli/generate-image.js --help`). If the original capture command is
 identified later, add it here.
+
+## 5. Full-tree re-audit 2026-10-27 — remaining items with no generator in tree
+
+Re-scanned all of `/mnt/Drive/PHB` (all `*.py`/`*.ipynb`/`*.gp`/`*.sh`, plus a
+check for Chimera/VMD/PyMOL/Blender/POV-Ray scripts — none exist). 108 PNGs +
+1 SVG + 2 `.webm` inventoried; everything else maps to sections 1–4 above.
+No generating code was found for:
+
+- `magic/largeSquare/4x4cross-section.png`, `magic/round/hollow.png`,
+  `magic/round4/round4.png` — almost certainly manual screenshots; no script.
+- `PHB/60helix/10/output/all/dev_rmsd.png` — no `dev_rmsd` generator script.
+- `PHBdna2/duplex/5T/output/1/rmsf_rmsd.png` — no `rmsf` generator script.
+- `PHBdna2/simplex/10T/output/combined/barchart.png` — no `barchart` script.
+- `PHB5/square/a1/plotBack.png`, `PHB5/lowa/a03/s2plot.png` — one-off variants
+  of the §1 inline-gnuplot runs (tweaked replot, command not saved).
+- `PHBdna2/simplex/5T/output/Figures/traj*.png`, `cluster*.png`,
+  `trajectory12fps.webm`, `trajectory24fps.webm` — see §4.
+
+ppview-side renderers that reproduce this class of output headlessly
+(`render_phb.py`, `render_batch.py`, `cli/generate-image.js`, `bench/`,
+`visual-tests/`) are tracked in this repo outside `analysis-scripts/`.
