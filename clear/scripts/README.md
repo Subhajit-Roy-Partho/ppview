@@ -12,3 +12,12 @@ Scripts that produced the PHB visuals (copied from `large_crystal/hand5/final_re
 | `stills.slurm`, `turn.slurm`, `videos.slurm` | Slurm scripts used for the above |
 
 The clean figures in `../<run>/` are made by `../render_clear.py` (see `../README.md`).
+
+## Additional subfolders (videos, figures, analysis)
+- `videos/v1`–`v4`: all video generators and Slurm drivers (`make_phb_videos.py`, `make_videos_v3.py`, `make_videos_v4.py`, `render_phb_v3.py`, `render_grant.slurm`, ...)
+- `figures/`: phase-diagram, structure and crystal plot scripts
+- `final_report_extra/`: two-species figures and report web-page builders
+- `crystal_analysis/`: crystal order analysis and energy plots
+- `legacy/`: earlier analysis and render scripts
+
+Scripts are copied as used on the ASU phx cluster; paths inside refer to `/scratch/sroy85/Github/dna/large_crystal`.
