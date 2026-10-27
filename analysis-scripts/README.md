@@ -124,3 +124,20 @@ No generating code was found for:
 ppview-side renderers that reproduce this class of output headlessly
 (`render_phb.py`, `render_batch.py`, `cli/generate-image.js`, `bench/`,
 `visual-tests/`) are tracked in this repo outside `analysis-scripts/`.
+
+## 6. Drive-wide coverage pass 2026-10-26 (`drive-coverage/` + images in place)
+
+Audit of `/mnt/Drive/PHB`: 214 sweep dirs (`output/` parents), 1471 `last_conf.dat`
+(~89% completed, t>0), 1471 trajectories. Before the pass, 116 sweeps had no image
+at all. Scripts (all idempotent, repo-convention outputs written in place):
+
+- `gen_missing_plots.py` — wrote 65 missing energy `plot.png` (+ `plot.gp`) in the
+  repo's gnuplot style (`u 1:4`, log x): 13 PHBdegub + 2 PHBcg/PHBlb + 45 helix
+  (50helix/60helix/560helix scans + PHB/ mirrors + Helix/Single) +
+  5 PHBdna2 (duplex 10/15/20T, simplex 15/20T). Backup/ mirrors intentionally skipped.
+- `fill_clusters.sh` — parallel form of `clusters/run_analysis.sh`; verified
+  `clusters/` now holds `.mgl`+`.json` for all 869 processable completed runs
+  (18 dirs have empty N_conf=0 confs — simulations never ran — correctly skipped).
+- `render_finals.sh` — text-free `final.png` per completed run dir via
+  `render_phb.py` (`--model ball`, 1920x1080, white, no title/legend/box):
+  same clear/ image conventions for the PHB-format runs.
