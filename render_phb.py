@@ -58,6 +58,14 @@ from PIL import Image, ImageDraw, ImageFont
 
 CORE_COLOR = "#c8ccd6"
 ARM_COLOR = "#5f6f86"
+# one body colour per core species (the core bead type), in order of bead-type id
+SPECIES_PALETTE = ["#3b78c2", "#e8912d", "#3fa66a", "#8e5db8", "#d24d4d", "#2fb0b0", "#a07f4d", "#d96ea6"]
+
+
+def species_colors(ptype, btype):
+    """-> ([species bead types, sorted], {btype: hex}) of the core beads."""
+    types = sorted(set(int(b) for b in btype[ptype == -3]))
+    return types, {t: SPECIES_PALETTE[i % len(SPECIES_PALETTE)] for i, t in enumerate(types)}
 MIN_RELATIVE_RADIUS = 0.25      # PHB_MIN_RELATIVE_RADIUS in phb.js
 UNASSIGNED_COLOR = "#8a8f98"
 
@@ -697,6 +705,8 @@ def build_parser() -> argparse.ArgumentParser:
                         "ballstick: cores as balls, each helix arm drawn as small joint balls joined by sticks")
     s.add_argument("--stick-radius", type=float, default=0.06, help="ballstick: stick radius (default 0.06)")
     s.add_argument("--joint-radius", type=float, default=0.13, help="ballstick: arm-bead (joint) radius (default 0.13)")
+    s.add_argument("--species-colors", action="store_true",
+                   help="colour each core body by its species (core bead type); patches keep their interaction colours")
     s.add_argument("--no-patches", dest="patches", action="store_false", default=None,
                    help="do not draw patches (default: drawn unless --cluster-file is given)")
     s.add_argument("--patches", dest="patches", action="store_true", default=None,
@@ -843,6 +853,11 @@ def render(args, log=print) -> str:
     else:
         body_rgb = np.where((topo.ptype == -3)[:, None],
                             np.array(hex_to_rgb(CORE_COLOR)), np.array(hex_to_rgb(ARM_COLOR)))
+
+    if args.species_colors:
+        _types, _cmap = species_colors(topo.ptype, topo.btype)
+        for _t, _hx in _cmap.items():
+            body_rgb[(topo.ptype == -3) & (topo.btype == _t)] = hex_to_rgb(_hx)
 
     # visibility: arms, slab
     visible = np.ones(n, bool)
