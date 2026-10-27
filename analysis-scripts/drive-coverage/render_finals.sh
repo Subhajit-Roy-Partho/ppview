@@ -11,7 +11,7 @@ top=$(ls "$dir"/*.phb 2>/dev/null | sort | head -1)
 [ -n "$top" ] || exit 0
 if python3 /home/gila/Documents/Github/ppview/render_phb.py --top "$top" --conf "$conf" \
     --out "$out" --width 1920 --height 1080 --scale 1 --model ball \
-    --background white --quiet > /dev/null 2>&1; then
+    --background white --species-colors --quiet > /dev/null 2>&1; then
   echo "OK  $dir"
 else
   rm -f "$out"

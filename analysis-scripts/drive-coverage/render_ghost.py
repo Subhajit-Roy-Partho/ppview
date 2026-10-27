@@ -34,7 +34,7 @@ def main(d):
     import argparse
     args = RP.build_parser().parse_args(['--top', str(top), '--conf', str(conf), '--out', str(out),
         '--width','1920','--height','1080','--scale','1','--model','ballstick',
-        '--background','white','--quiet'])
+        '--background','white','--species-colors','--quiet'])
     args.title = None; args.legend = False; args.box = False
     args.solid = mask; args.ghost_opacity = GHOST
     RP.render(args, log=lambda *a: None)
