@@ -162,6 +162,8 @@ at all. Scripts (all idempotent, repo-convention outputs written in place):
 - `run_initials.sh` — `initial.png` in each hero dir from the sweep's starting
   configuration (`main/last_conf.dat`, or `main/100q.dat` for PHBcg/PHBformedLB/100
   which has no `last_conf.dat` there): ball model, species colors, text-free, 84/84.
+- `run_initials_all.sh` — same, extended to every completed output T-dir drive-wide
+  (827 rendered; helix/DNA systems skipped — oxDNA `.top` needs the ppview CLI).
   Both render scripts now pass `--species-colors` (hcc/hcc2 convention: core body by
   species, patches keep interaction colours); `species_key.json` maps every hero to
   its species→colour key (only 2 distinct mappings drive-wide: 4-species and 8-species).
