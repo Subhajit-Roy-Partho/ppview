@@ -1,0 +1,674 @@
+[
+ {
+  "sweep": "PHB2/a0.1",
+  "T": "0.06",
+  "largest": 0.0619,
+  "six": 0.0,
+  "valence": 0.464,
+  "n": 194
+ },
+ {
+  "sweep": "PHB2/crystal/s1",
+  "T": "0.04",
+  "largest": 0.45,
+  "six": 0.095,
+  "valence": 1.96,
+  "n": 200
+ },
+ {
+  "sweep": "PHB2/crystal/s1-05",
+  "T": "0.06",
+  "largest": 0.465,
+  "six": 0.095,
+  "valence": 2.07,
+  "n": 200
+ },
+ {
+  "sweep": "PHB2/crystal/s1-1",
+  "T": "0.04",
+  "largest": 0.88,
+  "six": 0.12,
+  "valence": 3.57,
+  "n": 200
+ },
+ {
+  "sweep": "PHB2/crystal/s2",
+  "T": "0.02",
+  "largest": 0.44,
+  "six": 0.095,
+  "valence": 1.91,
+  "n": 200
+ },
+ {
+  "sweep": "PHB2/crystal/s5",
+  "T": "0.20",
+  "largest": 0.46,
+  "six": 0.075,
+  "valence": 1.84,
+  "n": 200
+ },
+ {
+  "sweep": "PHB2/sq0.1",
+  "T": "0.12",
+  "largest": 0.995,
+  "six": 0.0448,
+  "valence": 3.652,
+  "n": 201
+ },
+ {
+  "sweep": "PHB2/square",
+  "T": "0.16",
+  "largest": 0.0647,
+  "six": 0.0,
+  "valence": 1.214,
+  "n": 201
+ },
+ {
+  "sweep": "PHB3/crystals/86a03",
+  "T": "0.02",
+  "largest": 0.44,
+  "six": 0.205,
+  "valence": 2.13,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/86a1",
+  "T": "0.06",
+  "largest": 0.94,
+  "six": 0.25,
+  "valence": 3.81,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/a03",
+  "T": "0.04",
+  "largest": 0.02,
+  "six": 0.0,
+  "valence": 0.07,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/a05",
+  "T": "0.02",
+  "largest": 0.02,
+  "six": 0.0,
+  "valence": 0.1,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/a1",
+  "T": "0.08",
+  "largest": 0.065,
+  "six": 0.0,
+  "valence": 0.24,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/bigSa03",
+  "T": "0.16",
+  "largest": 0.48,
+  "six": 0.185,
+  "valence": 2.39,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/bigSa1",
+  "T": "0.16",
+  "largest": 1.0,
+  "six": 0.265,
+  "valence": 4.3,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/s10a03",
+  "T": "0.10",
+  "largest": 0.02,
+  "six": 0.0,
+  "valence": 0.08,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/crystals/s10a1",
+  "T": "0.14",
+  "largest": 0.075,
+  "six": 0.0,
+  "valence": 0.34,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a03",
+  "T": "0.02",
+  "largest": 0.01,
+  "six": 0.0,
+  "valence": 0.02,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a05",
+  "T": "0.06",
+  "largest": 0.02,
+  "six": 0.0,
+  "valence": 0.18,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a05s2",
+  "T": "0.12",
+  "largest": 0.025,
+  "six": 0.0,
+  "valence": 0.15,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a07",
+  "T": "0.04",
+  "largest": 0.03,
+  "six": 0.0,
+  "valence": 0.18,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a1",
+  "T": "0.06",
+  "largest": 0.035,
+  "six": 0.0,
+  "valence": 0.22,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a1s10",
+  "T": "0.32",
+  "largest": 0.055,
+  "six": 0.0,
+  "valence": 0.24,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a1s2",
+  "T": "0.03",
+  "largest": 0.065,
+  "six": 0.0,
+  "valence": 0.32,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/square/a5s10",
+  "T": "0.08",
+  "largest": 0.03,
+  "six": 0.0,
+  "valence": 0.31,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/weakCrystals/86a1",
+  "T": "0.06",
+  "largest": 0.985,
+  "six": 0.23,
+  "valence": 4.1,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/weakCrystals/a05",
+  "T": "0.02",
+  "largest": 0.015,
+  "six": 0.0,
+  "valence": 0.1,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/weakCrystals/a1",
+  "T": "0.06",
+  "largest": 0.07,
+  "six": 0.0,
+  "valence": 0.31,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/weakCrystals/bigSa1",
+  "T": "0.16",
+  "largest": 1.0,
+  "six": 0.28,
+  "valence": 4.36,
+  "n": 200
+ },
+ {
+  "sweep": "PHB3/weakCrystals/s10a1",
+  "T": "0.16",
+  "largest": 0.04,
+  "six": 0.0,
+  "valence": 0.39,
+  "n": 200
+ },
+ {
+  "sweep": "PHB4/square/a03",
+  "T": "0.066",
+  "largest": 0.006,
+  "six": 0.0,
+  "valence": 0.188,
+  "n": 500
+ },
+ {
+  "sweep": "PHB4/square/a05",
+  "T": "0.066",
+  "largest": 0.024,
+  "six": 0.002,
+  "valence": 1.24,
+  "n": 500
+ },
+ {
+  "sweep": "PHB4/square/a07",
+  "T": "0.066",
+  "largest": 0.128,
+  "six": 0.006,
+  "valence": 2.06,
+  "n": 500
+ },
+ {
+  "sweep": "PHB4/square/a1",
+  "T": "0.072",
+  "largest": 0.828,
+  "six": 0.068,
+  "valence": 3.264,
+  "n": 500
+ },
+ {
+  "sweep": "PHB4/weakSquare/a03",
+  "T": "0.066",
+  "largest": 0.008,
+  "six": 0.0,
+  "valence": 0.32,
+  "n": 500
+ },
+ {
+  "sweep": "PHB4/weakSquare/a05",
+  "T": "0.066",
+  "largest": 0.03,
+  "six": 0.002,
+  "valence": 1.332,
+  "n": 500
+ },
+ {
+  "sweep": "PHB4/weakSquare/a07",
+  "T": "0.066",
+  "largest": 0.386,
+  "six": 0.026,
+  "valence": 2.724,
+  "n": 500
+ },
+ {
+  "sweep": "PHB4/weakSquare/a1",
+  "T": "0.072",
+  "largest": 0.61,
+  "six": 0.072,
+  "valence": 3.344,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/2point/a1",
+  "T": "0.075",
+  "largest": 0.986,
+  "six": 0.162,
+  "valence": 6.284,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/equal/a03",
+  "T": "0.055",
+  "largest": 0.76,
+  "six": 0.046,
+  "valence": 2.724,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/equal/a05",
+  "T": "0.068",
+  "largest": 0.166,
+  "six": 0.088,
+  "valence": 2.304,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/equal/a07",
+  "T": "0.074",
+  "largest": 0.47,
+  "six": 0.17,
+  "valence": 2.68,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/equal/a1",
+  "T": "0.076",
+  "largest": 0.964,
+  "six": 0.302,
+  "valence": 4.192,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/longHands",
+  "T": "0.080",
+  "largest": 1.0,
+  "six": 0.1,
+  "valence": 4.068,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/lowa/a03",
+  "T": "0.15",
+  "largest": 0.282,
+  "six": 0.002,
+  "valence": 1.964,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/square/a03",
+  "T": "0.035",
+  "largest": 0.62,
+  "six": 0.01,
+  "valence": 2.432,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/square/a05",
+  "T": "0.068",
+  "largest": 0.358,
+  "six": 0.118,
+  "valence": 2.496,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/square/a07",
+  "T": "0.073",
+  "largest": 0.79,
+  "six": 0.334,
+  "valence": 3.828,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/square/a1",
+  "T": "0.075",
+  "largest": 0.972,
+  "six": 0.33,
+  "valence": 4.328,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/weakSquare/a03",
+  "T": "0.050",
+  "largest": 0.754,
+  "six": 0.028,
+  "valence": 2.916,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/weakSquare/a05",
+  "T": "0.068",
+  "largest": 0.198,
+  "six": 0.072,
+  "valence": 2.104,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/weakSquare/a07",
+  "T": "0.074",
+  "largest": 0.636,
+  "six": 0.238,
+  "valence": 3.144,
+  "n": 500
+ },
+ {
+  "sweep": "PHB5/weakSquare/a1",
+  "T": "0.076",
+  "largest": 0.96,
+  "six": 0.304,
+  "valence": 4.256,
+  "n": 500
+ },
+ {
+  "sweep": "PHBcg/PHBformedLB/100",
+  "T": "0.01",
+  "largest": 0.0,
+  "six": 0.0,
+  "valence": 0.0,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdebug/s2helix",
+  "T": "0.08",
+  "largest": 0.17,
+  "six": 0.0,
+  "valence": 1.97,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdebug/sh0ab100",
+  "T": "0.08",
+  "largest": 0.86,
+  "six": 0.0,
+  "valence": 2.5,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdebug/sh0alpha0.01",
+  "T": "0.12",
+  "largest": 0.01,
+  "six": 0.0,
+  "valence": 0.01,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdebug/sh0alpha0.03",
+  "T": "0.08",
+  "largest": 0.02,
+  "six": 0.0,
+  "valence": 0.17,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdebug/sh0alpha0.05",
+  "T": "0.10",
+  "largest": 0.015,
+  "six": 0.0,
+  "valence": 0.4,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdebug/sh0alpha0.12",
+  "T": "0.08",
+  "largest": 0.895,
+  "six": 0.0,
+  "valence": 2.51,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdebug/small1_0helix",
+  "T": "0.08",
+  "largest": 0.86,
+  "six": 0.0,
+  "valence": 2.44,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub",
+  "T": "0.01",
+  "largest": 0.0,
+  "six": 0.0,
+  "valence": 0.0,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/Ka100",
+  "T": "0.05",
+  "largest": 0.0,
+  "six": 0.0,
+  "valence": 0.0,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/box300",
+  "T": "0.05",
+  "largest": 0.0,
+  "six": 0.0,
+  "valence": 0.0,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/sh0ab100",
+  "T": "0.08",
+  "largest": 0.77,
+  "six": 0.0,
+  "valence": 2.38,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/sh0alpha0.01",
+  "T": "0.08",
+  "largest": 0.01,
+  "six": 0.0,
+  "valence": 0.01,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/sh0alpha0.03",
+  "T": "0.08",
+  "largest": 0.015,
+  "six": 0.0,
+  "valence": 0.23,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/sh0alpha0.05",
+  "T": "0.10",
+  "largest": 0.03,
+  "six": 0.0,
+  "valence": 0.58,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/sh0alpha0.12",
+  "T": "0.08",
+  "largest": 0.87,
+  "six": 0.005,
+  "valence": 2.34,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small",
+  "T": "0.37",
+  "largest": 1.0,
+  "six": 0.015,
+  "valence": 3.11,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small0.01",
+  "T": "0.56",
+  "largest": 0.015,
+  "six": 0.0,
+  "valence": 0.08,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small0.01a0.01",
+  "T": "0.06",
+  "largest": 0.01,
+  "six": 0.0,
+  "valence": 0.01,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small0.01a0.05",
+  "T": "0.01",
+  "largest": 0.0,
+  "six": 0.0,
+  "valence": 0.0,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small0.01a0.15",
+  "T": "0.11",
+  "largest": 0.01,
+  "six": 0.0,
+  "valence": 0.01,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small0.1",
+  "T": "0.01",
+  "largest": 0.805,
+  "six": 0.035,
+  "valence": 2.36,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small1",
+  "T": "0.25",
+  "largest": 0.755,
+  "six": 0.05,
+  "valence": 2.23,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small10",
+  "T": "0.21",
+  "largest": 0.98,
+  "six": 0.05,
+  "valence": 2.99,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small1_0helix",
+  "T": "0.08",
+  "largest": 0.995,
+  "six": 0.005,
+  "valence": 2.84,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small1_2",
+  "T": "0.08",
+  "largest": 0.985,
+  "six": 0.075,
+  "valence": 3.26,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small30",
+  "T": "0.25",
+  "largest": 0.975,
+  "six": 0.08,
+  "valence": 3.12,
+  "n": 200
+ },
+ {
+  "sweep": "PHBdegub/small50",
+  "T": "0.43",
+  "largest": 0.97,
+  "six": 0.075,
+  "valence": 3.22,
+  "n": 200
+ },
+ {
+  "sweep": "Seeded/HandLength/7longHand",
+  "T": "0.078",
+  "largest": 0.934,
+  "six": 0.534,
+  "valence": 4.624,
+  "n": 500
+ },
+ {
+  "sweep": "SmallSeed/7longHand",
+  "T": "0.080",
+  "largest": 0.52,
+  "six": 0.216,
+  "valence": 2.6,
+  "n": 500
+ },
+ {
+  "sweep": "SmallSeed/7longHand-300",
+  "T": "0.080",
+  "largest": 0.804,
+  "six": 0.45,
+  "valence": 4.028,
+  "n": 500
+ }
+]

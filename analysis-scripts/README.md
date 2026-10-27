@@ -141,3 +141,17 @@ at all. Scripts (all idempotent, repo-convention outputs written in place):
 - `render_finals.sh` — text-free `final.png` per completed run dir via
   `render_phb.py` (`--model ball`, 1920x1080, white, no title/legend/box):
   same clear/ image conventions for the PHB-format runs.
+- `clear/scripts/yield_scan.py` (canonical version by the parallel session; runs on
+  `/scratch`, needs numpy/scipy) — yield of every `final_conf.dat`: largest cluster,
+  six-valent fraction, tetrahedra/molecule into `yield.csv`. NOTE: the
+  `assembled_percentage` in `clusters/*.json` is uniformly 0.0 on this drive (tool
+  definition mismatch), so hero selection instead uses `yield_drive.py` (same real
+  yield metrics via `clear/scripts/cluster_labels`: largest-cluster fraction,
+  tiebreak six-valent, then lowest T; needs scipy) → `yield_heroes.json`
+  (84 sweep heroes, e.g. PHB3 bigSa1 T=0.16 at 1.000, PHB5/square/a1 T=0.075
+  at 0.972).
+- `prune_heroes.py` — enforces highest-yield-only: keeps `final.png` solely in
+  each sweep's hero temperature dir (incl. deleting `main/` finals), prunes the
+  rest (868 mass-rendered → 84 heroes). Helix/DNA systems (oxDNA `.top`, unreadable
+  by render_phb/cluster_labels) use lowest-final-energy as the hero proxy, rendered
+  via `cli/generate-image.js` against a local dev server.
