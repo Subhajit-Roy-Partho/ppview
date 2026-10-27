@@ -403,8 +403,9 @@ def render_scene(args, pos, a1, a3, ptype, btype, radius, body_rgb, topo, patch_
     order = order[np.argsort(sd[order])]          # front to back
     log(f"  drawing {len(order)} of {n} particles at {Wi}x{Hi}")
 
-    zmin_d = sd[order].min() if len(order) else 0.0
-    zmax_d = sd[order].max() if len(order) else 1.0
+    zref = order if getattr(args, "_zref", None) is None else np.nonzero(args._zref)[0]
+    zmin_d = sd[zref].min() if len(zref) else 0.0
+    zmax_d = sd[zref].max() if len(zref) else 1.0
     zspan = max(zmax_d - zmin_d, 1e-6)
 
     bg = np.array(hex_to_rgb(args._bg_hex))
@@ -565,7 +566,10 @@ def render_scene(args, pos, a1, a3, ptype, btype, radius, body_rgb, topo, patch_
     else:
         img = cbuf.astype(np.float32)
         cover = (ibuf >= 0).astype(np.float32)
-    return np.clip(img + 0.5, 0, 255).astype(np.uint8), cover, dict(f=f / S, sd=sd, sx=sx / S, sy=sy / S)
+    zimg = np.where(obj, zbuf, np.inf).astype(np.float32)
+    zmin = zimg.reshape(H, S, W, S).min((1, 3)) if S > 1 else zimg
+    return (np.clip(img + 0.5, 0, 255).astype(np.uint8), cover,
+            dict(f=f / S, sd=sd, sx=sx / S, sy=sy / S, zmin=zmin))
 
 
 def fade_mask_is(fade_mask, i):
@@ -759,6 +763,40 @@ def add_sticks(args, topo, pos, a1, a3, body_rgb, fade_mask):
     return pos2, np.concatenate([a1, zeros]), np.concatenate([a3, zeros]), ptype2, btype2, radius2, rgb2, fm
 
 
+def render_ghosted(args, solid, pos_w, a1, a3, ptype_r, btype_r, radius_r, body_rgb, topo, cmap, box,
+                   fade_mask, log):
+    """Two passes with one camera: `solid` particles opaque, all others at args.ghost_opacity.
+    A pixel shows whichever layer is nearer; a solid particle behind a ghost is seen through it."""
+    solid_full = solid if args._gid is None else solid[args._gid]
+    vis0 = args.visible.copy()
+    args._zref = vis0
+    args.visible = vis0 & solid_full
+    ic, cc, info_c = render_scene(args, pos_w, a1, a3, ptype_r, btype_r, radius_r, body_rgb, topo, cmap,
+                                  box, fade_mask, log)
+    args.visible = vis0 & ~solid_full
+    ig, cg, info_g = render_scene(args, pos_w, a1, a3, ptype_r, btype_r, radius_r, body_rgb, topo, cmap,
+                                  box, fade_mask, log)
+    args.visible = vis0
+    bg = np.array(hex_to_rgb(args._bg_hex)) * 255.0
+
+    def straight(img, cov):          # undo the blend with the background at antialiased edges
+        c = np.clip(cov, 1e-4, 1)[..., None]
+        return np.clip((img.astype(np.float32) - bg * (1 - c)) / c, 0, 255)
+
+    C, G = straight(ic, cc)[...], straight(ig, cg)
+    a = float(args.ghost_opacity)
+    cc3, cg3 = cc[..., None], (cg * a)[..., None]
+    solid_front = (info_c["zmin"] <= info_g["zmin"])[..., None]
+    # ghost over background, then solid over that   /   solid over background, then ghost over that
+    g_under = bg * (1 - cg3) + G * cg3
+    c_over = g_under * (1 - cc3) + C * cc3
+    c_under = bg * (1 - cc3) + C * cc3
+    g_over = c_under * (1 - cg3) + G * cg3
+    out = np.where(solid_front, c_over, g_over)
+    cover = np.maximum(cc, cg * a)
+    return np.clip(out + 0.5, 0, 255).astype(np.uint8), cover
+
+
 def render(args, log=print) -> str:
     t_start = time.time()
     topo = parse_topology(args.top)
@@ -836,9 +874,14 @@ def render(args, log=print) -> str:
             args, topo, pos_w, a1, a3, body_rgb, fade_mask)
         args.min_radius_frac = 0.0          # radii are explicit in ballstick mode
 
-    img, cover, _info = render_scene(args, pos_w, a1, a3, ptype_r, btype_r, radius_r,
-                                     body_rgb, topo, cmap, box, fade_mask,
-                                     (lambda *a: None) if args.quiet else log)
+    rlog = (lambda *a: None) if args.quiet else log
+    solid = getattr(args, "solid", None)
+    if solid is None:
+        img, cover, _info = render_scene(args, pos_w, a1, a3, ptype_r, btype_r, radius_r,
+                                         body_rgb, topo, cmap, box, fade_mask, rlog)
+    else:
+        img, cover = render_ghosted(args, solid, pos_w, a1, a3, ptype_r, btype_r, radius_r,
+                                    body_rgb, topo, cmap, box, fade_mask, rlog)
 
     out = Image.fromarray(img, "RGB")
     if transparent:
